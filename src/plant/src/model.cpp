@@ -2,7 +2,10 @@
 
 namespace palletrone {
 PlantModel::PlantModel(const std::string& scene, const Config& control, const ModelConfig& config)
-    : config_(config), thrust_scale_(control.vector4("motor.thrust_scale", true)), rng_(config.seed) {
+    : config_(config),
+      thrust_scale_(control.vector4("motor.thrust_scale", true)),
+      rng_(config.seed),
+      residual_rng_(config.residual_seed) {
   if (thrust_scale_.maxCoeff() > 1)
     throw std::runtime_error("motor.thrust_scale values must be within [0,1]");
   char error[2048]{};
@@ -145,6 +148,11 @@ void PlantModel::setInput(const Vec4& speed, const Vec4& angle) {
     effectiveness_start_time_ = data_->time;
     effectiveness_started_ = true;
   }
+  if (config_.residual_enabled && !residual_started_ && nominal_thrust.maxCoeff() > 1e-9) {
+    for (int k = 0; k < 3; ++k)
+      ou_torque_body_[k] = config_.residual_std[k] * residual_noise_(residual_rng_);
+    residual_started_ = true;
+  }
   // T_actual_i = eta_common(t_effective) * eta_relative_i * T_nominal_i.
   // Scaling precedes the existing transport delay and first-order motor lag.
   const Vec4 thrust = actualThrustScale().cwiseProduct(nominal_thrust);
@@ -188,6 +196,8 @@ PlantSample PlantModel::truth() const {
   for (int i = 0; i < 4; ++i) s.servo[i] = data_->qpos[model_->jnt_qposadr[joint_[i]]];
   s.common_effectiveness = commonEffectiveness();
   s.actual_thrust_scale = actualThrustScale();
+  s.ou_torque_body = ou_torque_body_;
+  s.total_external_torque_body = total_external_torque_body_;
   return s;
 }
 std::optional<PlantSample> PlantModel::step() {
@@ -206,12 +216,24 @@ std::optional<PlantSample> PlantModel::step() {
     d->ctrl[servo_[i]] = angle[i];
   }
   mju_zero(d->qfrc_applied, m->nv);
-  if (d->time >= config_.disturbance_start && d->time < config_.disturbance_end) {
-    Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor>> r(d->xmat + 9 * base_);
-    const Vec3 torque = r * config_.disturbance_torque;
-    mj_applyFT(m, d, config_.disturbance_force.data(), torque.data(), d->subtree_com + 3 * base_,
-               base_, d->qfrc_applied);
+  if (residual_started_) {
+    for (int k = 0; k < 3; ++k) {
+      const double a = std::exp(-m->opt.timestep / config_.residual_tau[k]);
+      ou_torque_body_[k] =
+          a * ou_torque_body_[k] +
+          config_.residual_std[k] * std::sqrt(1 - a * a) * residual_noise_(residual_rng_);
+    }
   }
+  const bool constant_active =
+      d->time >= config_.disturbance_start && d->time < config_.disturbance_end;
+  total_external_torque_body_ =
+      ou_torque_body_ + (constant_active ? config_.disturbance_torque : Vec3::Zero());
+  Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor>> r(d->xmat + 9 * base_);
+  applied_external_torque_world_ = r * total_external_torque_body_;
+  const Vec3 force = constant_active ? config_.disturbance_force : Vec3::Zero();
+  if (!force.isZero() || !applied_external_torque_world_.isZero())
+    mj_applyFT(m, d, force.data(), applied_external_torque_world_.data(),
+               d->subtree_com + 3 * base_, base_, d->qfrc_applied);
   mj_step(m, d);
   // Refresh poses/sensors at the integrated time (mj_step sensors otherwise lag qpos).
   mj_forward(m, d);

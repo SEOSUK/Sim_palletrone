@@ -84,6 +84,13 @@ else
     eta_common = NaN(N,1);
     actual_thrust_scale = NaN(N,4);
 end
+if size(values,2) >= 111
+    ou_torque_body = values(:,106:108);
+    total_external_torque_body = values(:,109:111);
+else
+    ou_torque_body = NaN(N,3);
+    total_external_torque_body = NaN(N,3);
+end
 
 % First rising edge of MOCE enable flag
 idx_moce = find(diff(moce_enabled > 0.5) == 1, 1, 'first') + 1;
@@ -125,6 +132,8 @@ desired_torque   = desired_torque(analysis_mask,:);
 past_com         = past_com(analysis_mask,:);
 eta_common       = eta_common(analysis_mask,:);
 actual_thrust_scale = actual_thrust_scale(analysis_mask,:);
+ou_torque_body = ou_torque_body(analysis_mask,:);
+total_external_torque_body = total_external_torque_body(analysis_mask,:);
 
 fprintf('[INFO] Analysis starts at log t = %.3f s; shifted plot time starts at 0 s.\n', ...
     metric_start_time);

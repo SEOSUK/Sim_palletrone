@@ -292,15 +292,38 @@ conditions, but is not identifiable from the current data.
 does not age the model. Effectiveness and the relative per-rotor multiplier are applied before the
 existing motor transport delay and first-order lag; no additional dynamic filter is introduced.
 
-The default pair `model.yaml` + `control.yaml` is deterministic v2. The exact deterministic v1
-baseline is available as `model_identified_v1.yaml` + `control_identified_v1.yaml`. In v1 the
-common model is disabled and the legacy scale is `[0.688, 0.688, 0.688, 0.688]`; in v2 the common
-model is enabled and the relative scales are all one, preventing double scaling.
+The exact historical baselines are preserved as `model_identified_v1.yaml`,
+`model_identified_v2_drift.yaml`, and `model_identified_v3_measurement.yaml`. The default
+`model.yaml` is v4. All versions use `control.yaml` except v1, which uses
+`control_identified_v1.yaml` to preserve its absolute `[0.688, 0.688, 0.688, 0.688]` scaling.
 
 The simulator CSV keeps legacy `data[0]` through `data[92]` unchanged and appends
 `eta_common` at `data[93]` and the four actual thrust scales at `data[94:97]`.
 Raw MuJoCo acceleration and angular acceleration are appended at `data[98:100]` and
 `data[101:103]`; the legacy noisy finite-difference channels remain unchanged.
+The v4 physical OU torque and total external body torque are appended at `data[104:106]` and
+`data[107:109]`.
+
+### 3.1.6 Colored Physical Torque Residual
+
+V4 adds an axis-independent Ornstein-Uhlenbeck body-torque process after the actuator dynamics.
+For each axis it uses the exact discrete update
+
+```text
+a = exp(-dt / tau)
+d[k+1] = a d[k] + sigma sqrt(1-a^2) N(0,1).
+```
+
+The process starts with the first nonzero thrust command and is initialized from its stationary
+distribution. It is transformed from body FLU to world coordinates before the existing MuJoCo
+external-wrench application. The applied body torque is explicitly
+`configured_constant_torque + OU_torque`; no clipping or force residual is used.
+
+The mandatory first physical guess was `[0.163, 0.108, 0.056] Nm` with correlation times
+`[0.60, 0.71, 0.94] s`. It over-predicted Complete-window DOB variance. Gray-box refinement using
+only DOB-output STD and correlation statistics produced the v4 setting stored in `model.yaml`.
+These physical-input values are calibration parameters and are not claimed to equal measured DOB
+output statistics or uniquely identified physical truth.
 
 ---
 

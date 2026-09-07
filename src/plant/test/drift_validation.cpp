@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
           "drift_validation CONTROL MODEL COMMAND SCENE LABEL [OUTPUT_CSV] [SEED]");
     Config control(argv[1]);
     ModelConfig model{Config(argv[2])};
-    if (argc > 7) model.seed = std::stoi(argv[7]);
+    if (argc > 7) model.seed = model.residual_seed = std::stoi(argv[7]);
     CommandConfig command_config{Config(argv[3])};
     PlantModel plant(argv[4], control, model);
     CascadeController controller(control, model);
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
     if (argc > 6) {
       csv.open(argv[6]);
       csv << "time,layout.data_offset";
-      for (int i = 0; i < 104; ++i) csv << ",data[" << i << ']';
+      for (int i = 0; i < 110; ++i) csv << ",data[" << i << ']';
       csv << '\n';
       csv << std::setprecision(17);
     }
@@ -100,12 +100,11 @@ int main(int argc, char** argv) {
           allocator.update(output.force, output.torque, s.servo, output.com, 1.0 / model.state_hz);
       plant.setInput(input.speed, input.angle);
 
-      if (moce_start < 0) continue;
-      const double teval = s.time - (moce_start - 5.0);
+      const double teval = moce_start >= 0 ? s.time - (moce_start - 5.0) : -1.0;
       Vec3 attitude_error = s.rpy - reference.rpy;
       attitude_error.z() = std::atan2(std::sin(attitude_error.z()), std::cos(attitude_error.z()));
       const Vec3 position_error = s.position - reference.position;
-      if (teval >= 0 && teval <= 80)
+      if (moce_start >= 0 && teval >= 0 && teval <= 80)
         overall.add(position_error, attitude_error, output.torque, output.disturbance, model.inertia);
       if (teval >= 5 && teval <= 60)
         transient1.add(position_error, attitude_error, output.torque, output.disturbance,
@@ -117,7 +116,7 @@ int main(int argc, char** argv) {
         complete.add(position_error, attitude_error, output.torque, output.disturbance,
                      model.inertia);
       if (csv) {
-        std::array<double, 104> data{};
+        std::array<double, 110> data{};
         for (int i = 0; i < 3; ++i) {
           data[i] = s.position[i];
           data[i + 3] = reference.position[i];
@@ -150,6 +149,8 @@ int main(int argc, char** argv) {
         for (int i = 0; i < 3; ++i) {
           data[98 + i] = sampled->truth_acceleration[i];
           data[101 + i] = sampled->truth_angular_acceleration[i];
+          data[104 + i] = sampled->ou_torque_body[i];
+          data[107 + i] = sampled->total_external_torque_body[i];
         }
         csv << static_cast<int64_t>(std::llround(s.time * 1e9)) << ",0";
         for (double value : data) csv << ',' << value;

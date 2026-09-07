@@ -1,0 +1,7 @@
+label,window,position_rms,attitude_rms,peak_attitude,angacc_cmd_rms,mean_dob
+v4_seed_4,overall_0_80,0.047135,0.02733,0.0744365,7.82295,4.32191
+v4_seed_4,transient1_5_60,0.0449571,0.0281295,0.0744365,8.37533,4.79307
+v4_seed_4,transient2_20_60,0.051968,0.0253423,0.0744365,6.47237,3.18853
+v4_seed_4,complete_60_80,0.052662,0.0249998,0.058408,6.04909,3.02616
+complete_60_80,attitude_axis_rms,0.0170349 0.0107457 0.0148098,dob_axis_rms, 3.09416  1.59253 0.653664
+final_com,  0.03409 0.0335894 0.0689291,true_com,0.0329787 0.0329787 0.0595745,final_com_error,0.0094402,final_eta,0.63

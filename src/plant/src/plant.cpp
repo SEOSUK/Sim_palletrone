@@ -81,6 +81,8 @@ class Plant : public rclcpp::Node {
       msg.a_rpy[i] = s.angular_acceleration[i];
       msg.truth_acc[i] = s.truth_acceleration[i];
       msg.truth_a_rpy[i] = s.truth_angular_acceleration[i];
+      msg.ou_torque_body[i] = s.ou_torque_body[i];
+      msg.total_external_torque_body[i] = s.total_external_torque_body[i];
     }
     for (int i = 0; i < 4; ++i) msg.servo[i] = s.servo[i];
     msg.common_effectiveness = s.common_effectiveness;

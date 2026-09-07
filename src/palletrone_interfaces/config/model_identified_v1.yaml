@@ -49,6 +49,12 @@ model:
     torque_body: [0.0, 0.0, 0.0]
     start_s: 0.0
     end_s: 1000000.0
+  residual_torque:
+    enabled: false
+    frame: body
+    std_nm: [0.163, 0.108, 0.056]
+    correlation_time_s: [0.60, 0.71, 0.94]
+    seed: 1
 simulation:
   physics_hz: 400.0
   state_hz: 400.0

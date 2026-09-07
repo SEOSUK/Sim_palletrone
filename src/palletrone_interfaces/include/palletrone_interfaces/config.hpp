@@ -88,11 +88,12 @@ struct ModelConfig {
   double servo_limit, servo_gain, servo_damping, servo_armature, servo_max_torque, servo_delay;
   double sensor_delay, servo_noise, physics_hz, state_hz, realtime_factor, viewer_hz, timeout;
   double disturbance_start, disturbance_end;
-  int seed;
-  bool effectiveness_enabled;
+  int seed, residual_seed;
+  bool effectiveness_enabled, residual_enabled;
   Vec3 base_inertia, inertia, com, payload_position, initial_com, initial_position, initial_rpy;
   Vec3 rotor_inertia, rotor_com, pos_noise, vel_noise, att_noise, gyro_noise;
   Vec3 disturbance_force, disturbance_torque;
+  Vec3 residual_std, residual_tau;
   explicit ModelConfig(const Config& c) {
     vehicle_mass = c.scalar("model.vehicle_mass", 0, true);
     payload_mass = c.scalar("model.payload.mass");
@@ -138,6 +139,12 @@ struct ModelConfig {
     disturbance_torque = c.vector("model.disturbance.torque_body");
     disturbance_start = c.scalar("model.disturbance.start_s");
     disturbance_end = c.scalar("model.disturbance.end_s");
+    residual_enabled = c.get<bool>("model.residual_torque.enabled");
+    if (c.get<std::string>("model.residual_torque.frame") != "body")
+      throw std::runtime_error("model.residual_torque.frame must be body");
+    residual_std = c.vector("model.residual_torque.std_nm", true);
+    residual_tau = c.vector("model.residual_torque.correlation_time_s", true);
+    residual_seed = c.get<int>("model.residual_torque.seed");
     physics_hz = c.scalar("simulation.physics_hz", 0, true);
     state_hz = c.scalar("simulation.state_hz", 0, true);
     realtime_factor = c.scalar("simulation.realtime_factor", 0, true);
@@ -149,7 +156,8 @@ struct ModelConfig {
         servo_gain > 1.0 || !std::isfinite(effectiveness_slope) ||
         effectiveness_min > effectiveness_max || effectiveness_initial < effectiveness_min ||
         effectiveness_initial > effectiveness_max ||
-        state_hz > physics_hz || disturbance_end < disturbance_start)
+        state_hz > physics_hz || disturbance_end < disturbance_start ||
+        (residual_enabled && residual_tau.minCoeff() <= 0))
       throw std::runtime_error(
           "Invalid model mass/inertia/servo limit/sample rate/disturbance interval");
   }

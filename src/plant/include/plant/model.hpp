@@ -35,6 +35,8 @@ struct PlantSample {
   Vec3 position = Vec3::Zero(), velocity = Vec3::Zero(), acceleration = Vec3::Zero();
   Vec3 rpy = Vec3::Zero(), omega = Vec3::Zero(), angular_acceleration = Vec3::Zero();
   Vec4 servo = Vec4::Zero();
+  double common_effectiveness = 1.0;
+  Vec4 actual_thrust_scale = Vec4::Ones();
 };
 class PlantModel {
  public:
@@ -45,6 +47,9 @@ class PlantModel {
   mjModel* model() const { return model_.get(); }
   mjData* data() const { return data_.get(); }
   const ModelConfig& config() const { return config_; }
+  double effectivenessForElapsed(double elapsed) const;
+  double commonEffectiveness() const;
+  Vec4 actualThrustScale() const { return commonEffectiveness() * thrust_scale_; }
 
  private:
   using ModelPtr = std::unique_ptr<mjModel, decltype(&mj_deleteModel)>;
@@ -59,9 +64,9 @@ class PlantModel {
   std::deque<PlantSample> sensor_delay_;
   std::mt19937 rng_;
   std::normal_distribution<double> noise_{0, 1};
-  double last_input_ = 0, next_sample_ = 0;
+  double last_input_ = 0, next_sample_ = 0, effectiveness_start_time_ = 0;
   PlantSample previous_noisy_;
-  bool have_noisy_ = false;
+  bool have_noisy_ = false, effectiveness_started_ = false;
   Vec3 sensor3(int id) const;
   Vec3 noisy(const Vec3& x, const Vec3& sigma);
 };

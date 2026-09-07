@@ -75,7 +75,7 @@ class CsvLogger : public rclcpp::Node {
 
   void writeHeader() {
     csv_ << "time,layout.data_offset";
-    for (int i = 0; i < 93; ++i) csv_ << ",data[" << i << ']';
+    for (int i = 0; i < 98; ++i) csv_ << ",data[" << i << ']';
     csv_ << '\n';
   }
 
@@ -90,7 +90,7 @@ class CsvLogger : public rclcpp::Node {
     }
     const auto nanoseconds = static_cast<int64_t>(
         std::llround(std::max(0.0, status.sample_time - start_time_) * 1e9));
-    std::array<double, 93> data{};
+    std::array<double, 98> data{};
 
     // Match the fixed column indices used by Exp_3_logger.m.
     for (int i = 0; i < 3; ++i) {
@@ -120,6 +120,9 @@ class CsvLogger : public rclcpp::Node {
     data[63] = status.adaptation_active ? 1.0 : 0.0;
     data[64] = command_.moce_enabled ? 1.0 : 0.0;
     data[65] = command_.moce_z_enabled ? 1.0 : 0.0;
+    // Append-only extension: legacy data[0:92] and MATLAB indices remain unchanged.
+    data[93] = state_.common_effectiveness;
+    for (int i = 0; i < 4; ++i) data[94 + i] = state_.actual_thrust_scale[i];
 
     csv_ << nanoseconds << ",0";
     for (double value : data) csv_ << ',' << value;

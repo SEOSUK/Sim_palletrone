@@ -73,6 +73,18 @@ past_com(:,3)=values(:,61);
 % ---------------------------------------------------------
 moce_enabled = values(:,66);
 
+% Append-only simulator extension: data[93] and data[94:97]. Legacy 95-column
+% real-flight logs do not contain these fields and retain all original indices.
+if size(values,2) >= 99
+    eta_common = values(:,95);
+    actual_thrust_scale = values(:,96:99);
+    fprintf('[INFO] Common thrust effectiveness range: %.6f to %.6f\n', ...
+        min(eta_common), max(eta_common));
+else
+    eta_common = NaN(N,1);
+    actual_thrust_scale = NaN(N,4);
+end
+
 % First rising edge of MOCE enable flag
 idx_moce = find(diff(moce_enabled > 0.5) == 1, 1, 'first') + 1;
 
@@ -111,6 +123,8 @@ desired_attitude = desired_attitude(analysis_mask,:);
 torque_dhat      = torque_dhat(analysis_mask,:);
 desired_torque   = desired_torque(analysis_mask,:);
 past_com         = past_com(analysis_mask,:);
+eta_common       = eta_common(analysis_mask,:);
+actual_thrust_scale = actual_thrust_scale(analysis_mask,:);
 
 fprintf('[INFO] Analysis starts at log t = %.3f s; shifted plot time starts at 0 s.\n', ...
     metric_start_time);

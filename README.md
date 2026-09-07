@@ -274,6 +274,32 @@ Unequal values can later represent rotor-to-rotor asymmetry:
 \eta_i = \bar{\eta} + \Delta\eta_i
 \]
 
+### 3.1.5 Slow Common-Mode Thrust-Effectiveness Drift
+
+The deterministic v2 plant adds the flight-log-identified operating-condition-dependent
+common effectiveness
+
+```text
+eta_common(t) = clamp(0.6966 - 0.000844 t, 0.63, 0.70).
+T_actual_i = eta_common(t) * eta_relative_i * T_nominal_i.
+```
+
+The available logs do not contain battery voltage, so this is deliberately not described as a
+battery-voltage-sag model. The cause may involve battery, temperature, or other operating
+conditions, but is not identifiable from the current data.
+
+`t` starts at the first nonzero nominal thrust command. Time spent with only the viewer running
+does not age the model. Effectiveness and the relative per-rotor multiplier are applied before the
+existing motor transport delay and first-order lag; no additional dynamic filter is introduced.
+
+The default pair `model.yaml` + `control.yaml` is deterministic v2. The exact deterministic v1
+baseline is available as `model_identified_v1.yaml` + `control_identified_v1.yaml`. In v1 the
+common model is disabled and the legacy scale is `[0.688, 0.688, 0.688, 0.688]`; in v2 the common
+model is enabled and the relative scales are all one, preventing double scaling.
+
+The simulator CSV keeps legacy `data[0]` through `data[92]` unchanged and appends
+`eta_common` at `data[93]` and the four actual thrust scales at `data[94:97]`.
+
 ---
 
 ## 3.2 Actuator Dynamics Identification

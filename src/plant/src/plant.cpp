@@ -81,6 +81,8 @@ class Plant : public rclcpp::Node {
       msg.a_rpy[i] = s.angular_acceleration[i];
     }
     for (int i = 0; i < 4; ++i) msg.servo[i] = s.servo[i];
+    msg.common_effectiveness = s.common_effectiveness;
+    for (int i = 0; i < 4; ++i) msg.actual_thrust_scale[i] = s.actual_thrust_scale[i];
     return msg;
   }
   struct View {

@@ -141,13 +141,28 @@ void PlantModel::setInput(const Vec4& speed, const Vec4& angle) {
   const Vec4 nominal_thrust = (config_.thrust_coefficient * speed.cwiseMax(0).array().square())
                                   .matrix()
                                   .cwiseMin(config_.max_thrust);
-  const Vec4 thrust = thrust_scale_.cwiseProduct(nominal_thrust);
+  if (!effectiveness_started_ && nominal_thrust.maxCoeff() > 1e-9) {
+    effectiveness_start_time_ = data_->time;
+    effectiveness_started_ = true;
+  }
+  // T_actual_i = eta_common(t_effective) * eta_relative_i * T_nominal_i.
+  // Scaling precedes the existing transport delay and first-order motor lag.
+  const Vec4 thrust = actualThrustScale().cwiseProduct(nominal_thrust);
   motor_delay_.push(data_->time, thrust);
   servo_delay_.push(data_->time,
                     (config_.servo_gain * angle)
                         .cwiseMax(-config_.servo_limit)
                         .cwiseMin(config_.servo_limit));
   last_input_ = data_->time;
+}
+double PlantModel::effectivenessForElapsed(double elapsed) const {
+  if (!config_.effectiveness_enabled) return 1.0;
+  return std::clamp(config_.effectiveness_initial + config_.effectiveness_slope * elapsed,
+                    config_.effectiveness_min, config_.effectiveness_max);
+}
+double PlantModel::commonEffectiveness() const {
+  const double elapsed = effectiveness_started_ ? data_->time - effectiveness_start_time_ : 0.0;
+  return effectivenessForElapsed(elapsed);
 }
 Vec3 PlantModel::sensor3(int id) const {
   const auto* v = data_->sensordata + model_->sensor_adr[id];
@@ -169,6 +184,8 @@ PlantSample PlantModel::truth() const {
   s.acceleration = Eigen::Map<const Vec3>(data_->qacc);
   s.angular_acceleration = Eigen::Map<const Vec3>(data_->qacc + 3);
   for (int i = 0; i < 4; ++i) s.servo[i] = data_->qpos[model_->jnt_qposadr[joint_[i]]];
+  s.common_effectiveness = commonEffectiveness();
+  s.actual_thrust_scale = actualThrustScale();
   return s;
 }
 std::optional<PlantSample> PlantModel::step() {

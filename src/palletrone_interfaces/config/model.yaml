@@ -1,11 +1,14 @@
 # World: Z-up. Body: FLU (x forward, y left, z up). Angles are radians.
 model:
   vehicle_mass: 4.2 # unloaded vehicle total, including four rotors [kg]
-  base_inertia: [0.360091, 0.360702, 0.660702] # principal kg m^2 about base's own CoM
-  nominal_inertia: [0.38, 0.38, 0.697] # controller/DOB rigid-body approximation, kg m^2
+  # Bare base-body inertia about its own CoM. Together with the four explicit
+  # rotor bodies this reproduces J_unloaded = [0.110, 0.072, 0.083] kg m^2.
+  base_inertia: [0.09062181, 0.05262181, 0.04652020]
+  nominal_inertia: [0.0768, 0.0871, 0.113] # controller/DOB rigid-body approximation, kg m^2
   payload:
     mass: 0.5 # [kg]
-    position: [0.25, 0.25, 0.5] # payload center in base frame [m]
+    # Setup 2 measurement is FRD [0.31, -0.31, -0.56]; FRD -> FLU is [x, -y, -z].
+    position: [0.31, 0.31, 0.56] # canonical simulator/RViz FLU body coordinates [m]
   initial_com_estimate: [0.0, 0.0, 0.0] # estimator prior; independent of actual CoM
   gravity: 9.81
   initial_position: [0.0, 0.0, 0.145]
@@ -21,13 +24,14 @@ model:
     reaction_ratio: 0.02 # Nm/N; spin signs + - + -
     max_thrust: 50.0 # N per rotor
     delay_s: 0.01
-    time_constant_s: 0.0 # first-order thrust response; 0 = instantaneous after delay
+    time_constant_s: 0.017 # dynamic lag only; static gain is motor.thrust_scale
   servo:
     limit_rad: 0.7
+    dc_gain: 0.994
     joint_damping: 0.1
     armature: 0.0001
     max_torque: 2.0 # Nm
-    delay_s: 0.01
+    delay_s: 0.05 # command transport delay; joint/PD supplies the physical response
   sensors:
     delay_s: 0.0 # transport delay on the entire sampled state, independent of actuator delay
     position_std: [0.001, 0.001, 0.001]

@@ -80,23 +80,33 @@ PlantModel::PlantModel(const std::string& scene, const Config& control, const Mo
     motor->gear[5] = (i % 2 == 0 ? 1 : -1) * config.reaction_ratio;
   }
   // Merge the rigid payload into the base inertial body. Its location and mass
-  // determine total mass, CoM, and the diagonal parallel-axis contribution.
+  // determine total mass, CoM, and the full parallel-axis inertia tensor.
   const Vec3 base_com = (config.mass * config.com - rotor_moment) / base->mass;
   const Vec3 unloaded_base_com = -rotor_moment / unloaded_base_mass;
-  auto parallel_axis_diagonal = [](double mass, const Vec3& offset) -> Vec3 {
-    return Vec3(mass * (offset.y() * offset.y() + offset.z() * offset.z()),
-                mass * (offset.x() * offset.x() + offset.z() * offset.z()),
-                mass * (offset.x() * offset.x() + offset.y() * offset.y()));
+  auto parallel_axis = [](double mass, const Vec3& offset) -> Mat3 {
+    return mass * (offset.squaredNorm() * Mat3::Identity() - offset * offset.transpose());
   };
-  const Vec3 base_inertia =
-      config.base_inertia + parallel_axis_diagonal(unloaded_base_mass, unloaded_base_com - base_com) +
-      parallel_axis_diagonal(config.payload_mass, config.payload_position - base_com);
-  if (!base_inertia.allFinite() || 2 * base_inertia.maxCoeff() > base_inertia.sum()) {
+  const Mat3 base_inertia_tensor =
+      config.base_inertia.asDiagonal().toDenseMatrix() +
+      parallel_axis(unloaded_base_mass, unloaded_base_com - base_com) +
+      parallel_axis(config.payload_mass, config.payload_position - base_com);
+  Eigen::SelfAdjointEigenSolver<Mat3> eigensolver(base_inertia_tensor);
+  Vec3 base_inertia = eigensolver.eigenvalues();
+  Mat3 principal_axes = eigensolver.eigenvectors();
+  // Eigenvectors may form a reflection; a quaternion must represent a proper rotation.
+  if (principal_axes.determinant() < 0) principal_axes.col(0) *= -1;
+  if (eigensolver.info() != Eigen::Success || !base_inertia.allFinite() ||
+      2 * base_inertia.maxCoeff() > base_inertia.sum()) {
     throw std::runtime_error("Derived base inertia violates the principal-moment triangle rule: " +
                              std::to_string(base_inertia.x()) + ", " +
                              std::to_string(base_inertia.y()) + ", " +
                              std::to_string(base_inertia.z()));
   }
+  const Eigen::Quaterniond inertia_orientation(principal_axes);
+  base->iquat[0] = inertia_orientation.w();
+  base->iquat[1] = inertia_orientation.x();
+  base->iquat[2] = inertia_orientation.y();
+  base->iquat[3] = inertia_orientation.z();
   for (int k = 0; k < 3; ++k) {
     base->ipos[k] = base_com[k];
     base->inertia[k] = base_inertia[k];
@@ -134,7 +144,9 @@ void PlantModel::setInput(const Vec4& speed, const Vec4& angle) {
   const Vec4 thrust = thrust_scale_.cwiseProduct(nominal_thrust);
   motor_delay_.push(data_->time, thrust);
   servo_delay_.push(data_->time,
-                    angle.cwiseMax(-config_.servo_limit).cwiseMin(config_.servo_limit));
+                    (config_.servo_gain * angle)
+                        .cwiseMax(-config_.servo_limit)
+                        .cwiseMin(config_.servo_limit));
   last_input_ = data_->time;
 }
 Vec3 PlantModel::sensor3(int id) const {

@@ -84,7 +84,7 @@ inline Vec3 rpyFromRotation(const Mat3& r) {
 struct ModelConfig {
   double mass, vehicle_mass, payload_mass, gravity, rotor_mass, arm, rotor_z, pivot;
   double thrust_coefficient, reaction_ratio, max_thrust, motor_delay, motor_tau;
-  double servo_limit, servo_damping, servo_armature, servo_max_torque, servo_delay;
+  double servo_limit, servo_gain, servo_damping, servo_armature, servo_max_torque, servo_delay;
   double sensor_delay, servo_noise, physics_hz, state_hz, realtime_factor, viewer_hz, timeout;
   double disturbance_start, disturbance_end;
   int seed;
@@ -100,14 +100,6 @@ struct ModelConfig {
     base_inertia = c.vector("model.base_inertia", true);
     inertia = c.vector("model.nominal_inertia", true);
     com = payload_mass * payload_position / mass;
-    const Vec3 vehicle_offset = -com, payload_offset = payload_position - com;
-    auto parallel_axis_diagonal = [](double body_mass, const Vec3& offset) -> Vec3 {
-      return Vec3(body_mass * (offset.y() * offset.y() + offset.z() * offset.z()),
-                  body_mass * (offset.x() * offset.x() + offset.z() * offset.z()),
-                  body_mass * (offset.x() * offset.x() + offset.y() * offset.y()));
-    };
-    inertia += parallel_axis_diagonal(vehicle_mass, vehicle_offset) +
-               parallel_axis_diagonal(payload_mass, payload_offset);
     initial_com = c.vector("model.initial_com_estimate");
     initial_position = c.vector("model.initial_position");
     initial_rpy = c.vector("model.initial_rpy");
@@ -123,6 +115,7 @@ struct ModelConfig {
     motor_delay = c.scalar("model.motor.delay_s");
     motor_tau = c.scalar("model.motor.time_constant_s");
     servo_limit = c.scalar("model.servo.limit_rad", 0, true);
+    servo_gain = c.scalar("model.servo.dc_gain", 0, true);
     servo_damping = c.scalar("model.servo.joint_damping");
     servo_armature = c.scalar("model.servo.armature");
     servo_max_torque = c.scalar("model.servo.max_torque", 0, true);
@@ -146,6 +139,7 @@ struct ModelConfig {
     if (vehicle_mass <= 4 * rotor_mass || base_inertia.minCoeff() <= 0 || inertia.minCoeff() <= 0 ||
         rotor_inertia.minCoeff() <= 0 || 2 * base_inertia.maxCoeff() > base_inertia.sum() ||
         2 * rotor_inertia.maxCoeff() > rotor_inertia.sum() || servo_limit >= 1.5 ||
+        servo_gain > 1.0 ||
         state_hz > physics_hz || disturbance_end < disturbance_start)
       throw std::runtime_error(
           "Invalid model mass/inertia/servo limit/sample rate/disturbance interval");

@@ -1,6 +1,7 @@
 clear all; close all; clc;
 
 defaultDir = fullfile(getenv("HOME"), "palletrone_simulation", "src", "Sim_palletrone", "src", "palletrone_interfaces", "bag");
+
 if ~isfolder(defaultDir)
     defaultDir = pwd;
 end
@@ -59,21 +60,47 @@ past_com(:,1)=values(:,59);
 past_com(:,2)=values(:,60);
 past_com(:,3)=values(:,61);
 
-
 %% =========================
 % Metrics
 % =========================
-% Ignore data before this absolute logging time and display this point as t = 0 [s].
-metric_start_time          = 15;
-% User-configurable evaluation windows relative to metric_start_time [s]
+
+% ---------------------------------------------------------
+% Automatic time alignment using MOCE activation event
+% data[64] = MOCE enabled flag
+% values(:,1) = layout.data_offset
+% values(:,2) = data[0]
+% therefore data[64] -> values(:,66)
+% ---------------------------------------------------------
+moce_enabled = values(:,66);
+
+% First rising edge of MOCE enable flag
+idx_moce = find(diff(moce_enabled > 0.5) == 1, 1, 'first') + 1;
+
+if isempty(idx_moce)
+    error('MOCE activation event was not found in the CSV.');
+end
+
+moce_start_time = time(idx_moce);
+
+% In the real-flight evaluation:
+%   t = 5 s corresponds to MOCE activation.
+% Therefore set simulation t = 0 to 5 s before MOCE activation.
+metric_start_time = moce_start_time - 5.0;
+
+fprintf('[INFO] MOCE activated at log t = %.4f s\n', moce_start_time);
+fprintf('[INFO] Metric t = 0 aligned to log t = %.4f s\n', metric_start_time);
+
+% Evaluation windows after alignment
 metric_window_overall_s    = [0 80];
 metric_window_transient1_s = [5 60];
 metric_window_transient2_s = [20 60];
 metric_window_complete_s   = [60 80];
 
 analysis_mask = time >= metric_start_time;
+
 if ~any(analysis_mask)
-    error('metric_start_time (%.3f s) is outside the logged data range.', metric_start_time);
+    error('metric_start_time (%.3f s) is outside the logged data range.', ...
+        metric_start_time);
 end
 
 time             = time(analysis_mask) - metric_start_time;

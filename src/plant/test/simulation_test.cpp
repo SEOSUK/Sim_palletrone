@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <palletrone_controller/control.hpp>
 #include <palletrone_interfaces/command.hpp>
 #include <plant/model.hpp>
@@ -38,6 +39,12 @@ int main(int argc, char** argv) {
     PlantModel plant(scene, c, m);
     check(std::abs(mj_getTotalmass(plant.model()) - m.mass) < 1e-9, "Configured total mass");
     const int base = mj_name2id(plant.model(), mjOBJ_BODY, "base");
+    const int payload_site = mj_name2id(plant.model(), mjOBJ_SITE, "payload_marker");
+    check(payload_site >= 0, "Payload marker site exists");
+    check((Eigen::Map<const Vec3>(plant.model()->site_pos + 3 * payload_site) -
+           m.payload_position)
+              .norm() < 1e-12,
+          "MuJoCo payload marker uses canonical FLU body coordinates");
     Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor>> r(plant.data()->xmat + 9 * base);
     Vec3 actual_com = r.transpose() * (Eigen::Map<Vec3>(plant.data()->subtree_com + 3 * base) -
                                        Eigen::Map<Vec3>(plant.data()->xpos + 3 * base));
@@ -75,13 +82,39 @@ int main(int argc, char** argv) {
     const Eigen::Matrix3d before = Eigen::Map<Eigen::Matrix<double, 3, 3, Eigen::RowMajor>>(
         servo_test.data()->geom_xmat + 9 * geom);
     const double target = std::min(0.6, m.servo_limit * 0.9);
+    std::vector<double> servo_time, servo_angle;
     for (int step = 0; step < static_cast<int>(3 * m.physics_hz); ++step) {
       mju_copy(servo_test.data()->qpos, servo_test.model()->qpos0, 7);
       mju_zero(servo_test.data()->qvel, 6);
       servo_test.setInput(Vec4::Zero(), Vec4(target, -target, target, -target));
       servo_test.step();
+      servo_time.push_back(servo_test.data()->time);
+      servo_angle.push_back(servo_test.truth().servo[0]);
     }
-    check(std::abs(servo_test.truth().servo[0] - target) < 0.03, "Servo position tracking");
+    const double servo_gain = servo_angle.back() / target;
+    double best_error = std::numeric_limits<double>::infinity(), fitted_delay = 0, fitted_tau = 0;
+    for (double delay = 0; delay <= 0.1 + 1e-12; delay += dt) {
+      for (double tau = dt; tau <= 0.15 + 1e-12; tau += dt) {
+        double error = 0;
+        for (size_t i = 0; i < servo_time.size(); ++i) {
+          const double predicted = servo_time[i] <= delay
+                                       ? 0
+                                       : servo_gain * target *
+                                             (1 - std::exp(-(servo_time[i] - delay) / tau));
+          error += (servo_angle[i] - predicted) * (servo_angle[i] - predicted);
+        }
+        if (error < best_error) {
+          best_error = error;
+          fitted_delay = delay;
+          fitted_tau = tau;
+        }
+      }
+    }
+    std::cout << "servo_fopdt_gain=" << servo_gain << " delay_s=" << fitted_delay
+              << " tau_s=" << fitted_tau << '\n';
+    check(std::abs(servo_gain - 0.994) < 0.02, "Servo DC gain");
+    check(std::abs(fitted_delay - 0.050) < 0.01, "Servo total delay");
+    check(std::abs(fitted_tau - 0.052) < 0.02, "Servo total time constant");
     check((before - Eigen::Map<Eigen::Matrix<double, 3, 3, Eigen::RowMajor>>(
                         servo_test.data()->geom_xmat + 9 * geom))
                   .norm() > 0.1,

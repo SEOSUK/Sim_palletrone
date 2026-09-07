@@ -3,13 +3,17 @@
 <package format="3">
   <name>palletrone_interfaces</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Palletrone ROS interfaces and shared control/model configuration</description>
   <maintainer email="ryung9514@naver.com">ryung</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>std_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>ament_index_cpp</depend>
+  <depend>eigen</depend>
+  <depend>yaml-cpp</depend>
   <depend>rosidl_default_generators</depend>
 
   <exec_depend>rosidl_default_runtime</exec_depend>

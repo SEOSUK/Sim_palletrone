@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<robot name="palletrone">
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="package://plant/xml/BODY.stl"/></geometry>
+      <material name="body"><color rgba="0.75 0.77 0.82 1"/></material>
+    </visual>
+  </link>
+
+  <link name="prop1_link"><visual><origin xyz="0 0 0" rpy="0 0 1.57079632679"/><geometry><mesh filename="package://plant/xml/PROP.stl"/></geometry><material name="prop"><color rgba="0.85 0.85 0 1"/></material></visual></link>
+  <link name="prop2_link"><visual><origin xyz="0 0 0" rpy="0 0 1.57079632679"/><geometry><mesh filename="package://plant/xml/PROP.stl"/></geometry><material name="prop"/></visual></link>
+  <link name="prop3_link"><visual><origin xyz="0 0 0" rpy="0 0 1.57079632679"/><geometry><mesh filename="package://plant/xml/PROP.stl"/></geometry><material name="prop"/></visual></link>
+  <link name="prop4_link"><visual><origin xyz="0 0 0" rpy="0 0 1.57079632679"/><geometry><mesh filename="package://plant/xml/PROP.stl"/></geometry><material name="prop"/></visual></link>
+
+  <!-- Joint frames coincide with the four MuJoCo hinge pivots. -->
+  <joint name="j_servo1" type="revolute"><parent link="base_link"/><child link="prop1_link"/><origin xyz="0.148492 0.148492 0.070" rpy="0 0 0.78539816339"/><axis xyz="1 0 0"/><limit lower="-0.7" upper="0.7" effort="2" velocity="10"/></joint>
+  <joint name="j_servo2" type="revolute"><parent link="base_link"/><child link="prop2_link"/><origin xyz="-0.148492 0.148492 0.070" rpy="0 0 2.35619449019"/><axis xyz="1 0 0"/><limit lower="-0.7" upper="0.7" effort="2" velocity="10"/></joint>
+  <joint name="j_servo3" type="revolute"><parent link="base_link"/><child link="prop3_link"/><origin xyz="-0.148492 -0.148492 0.070" rpy="0 0 -2.35619449019"/><axis xyz="1 0 0"/><limit lower="-0.7" upper="0.7" effort="2" velocity="10"/></joint>
+  <joint name="j_servo4" type="revolute"><parent link="base_link"/><child link="prop4_link"/><origin xyz="0.148492 -0.148492 0.070" rpy="0 0 -0.78539816339"/><axis xyz="1 0 0"/><limit lower="-0.7" upper="0.7" effort="2" velocity="10"/></joint>
+</robot>

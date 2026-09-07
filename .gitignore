@@ -25,3 +25,5 @@ __pycache__/*
 .DS_Store
 Thumbs.db
 
+src/palletrone_interfaces/bag/*.csv
+src/palletrone_interfaces/bag/*.csv

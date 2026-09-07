@@ -3,7 +3,7 @@
 <package format="3">
   <name>palletrone_cmd</name>
   <version>0.0.1</version>
-  <description>Palletrone position command publisher</description>
+  <description>Palletrone keyboard and Lissajous command publisher</description>
 
   <maintainer email="ryung9514@naver.com">ryung</maintainer>
   <license>MIT</license>
@@ -11,8 +11,19 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
+  <depend>ament_index_cpp</depend>
+  <depend>yaml-cpp</depend>
+  <depend>eigen</depend>
   <depend>palletrone_interfaces</depend>
+  <depend>std_msgs</depend>
 
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>plant</exec_depend>
+  <exec_depend>palletrone_controller</exec_depend>
+  <exec_depend>palletrone_visualization</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
   <export>
     <build_type>ament_cmake</build_type>
   </export>

@@ -1,0 +1,10 @@
+float64 sample_time
+float64[3] velocity_setpoint
+float64[3] rate_setpoint
+float64[3] rate_pid_torque
+float64[3] disturbance_torque
+float64[3] compensated_torque
+float64[3] com_estimate
+float64[3] com_filtered
+float64[3] com_rate
+bool adaptation_active

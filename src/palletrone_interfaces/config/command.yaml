@@ -1,0 +1,59 @@
+# Keyboard command, reference trajectory, and visualization settings.
+# Loaded at node startup; restart the node after editing.
+command:
+  publish_hz: 100.0
+  keyboard_poll_hz: 50.0
+  startup_position: [0.0, 0.0, 0.0] # match model.initial_position to avoid startup jump
+  startup_rpy: [0.0, 0.0, 0.0]
+  position_tick: [0.20, 0.20, 0.20] # one key press [m]
+  yaw_tick_rad: 0.0872664626 # one key press [rad]
+  position_min: [-5.0, -5.0, 0.0]
+  position_max: [5.0, 5.0, 8.0]
+  manual_cancels_trajectory: false # ignore movement/yaw keys until G stops the trajectory
+  keys:
+    forward: w # +world X
+    backward: s # -world X
+    left: a # +world Y
+    right: d # -world Y
+    up: e # +world Z
+    down: q # -world Z
+    yaw_left: z
+    yaw_right: c
+    trajectory_toggle: g
+    automated_experiment: m
+    moce_toggle: p
+    hold_current_pose: h
+    reset: x
+    quit: t
+  lissajous:
+    center: [0.0, 0.0, 0.7] # automated-experiment hover center [m]
+    amplitude: [0.15, 0.35, 0.075] # [m]
+    frequency_hz: [0.30, 0.15, 0.60]
+    phase_rad: [0.0, 0.0, 1.57079632679] # z cosine
+    repeat: true
+    duration_s: 30.0 # used only when repeat=false
+    finish_behavior: hold # hold or reset
+  automated_experiment:
+    hover_position: [0.0, 0.0, 0.7] # [m]
+    ascent_duration_s: 5.0 # smooth minimum-jerk takeoff
+    hover_duration_s: 30.0
+    moce_start_s: 15.0 # elapsed hover time
+    lissajous_duration_s: 60.0
+visualization:
+  publish_hz: 30.0
+  frames:
+    world: world
+    pose: palletrone_pose
+    base: base_link
+    command: command_pose
+  marker:
+    estimated_com_topic: /palletrone/estimated_com_marker
+    true_com_topic: /palletrone/true_com_marker
+    payload_topic: /palletrone/payload_marker
+    com_distance_scale: 5.0 # multiply estimated/true CoM offsets from base_link for display
+    estimated_scale: 0.08
+    true_scale: 0.06
+    payload_dimensions: [0.20, 0.12, 0.08] # RViz cuboid size [x, y, z] [m]
+    estimated_rgba: [1.0, 0.15, 0.05, 1.0]
+    true_rgba: [0.05, 0.85, 0.20, 1.0]
+    payload_rgba: [0.10, 1.0, 0.10, 1.0]

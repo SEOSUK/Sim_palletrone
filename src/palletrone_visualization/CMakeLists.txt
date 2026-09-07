@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.8)
+project(palletrone_visualization)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_compile_options(-Wall -Wextra -Wpedantic)
+
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(palletrone_interfaces REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(yaml-cpp REQUIRED)
+
+add_executable(palletrone_visualization_node src/visualization_node.cpp)
+ament_target_dependencies(palletrone_visualization_node
+  rclcpp ament_index_cpp palletrone_interfaces sensor_msgs geometry_msgs visualization_msgs tf2_ros)
+target_link_libraries(palletrone_visualization_node Eigen3::Eigen yaml-cpp)
+
+install(TARGETS palletrone_visualization_node DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY urdf rviz DESTINATION share/${PROJECT_NAME})
+ament_package()

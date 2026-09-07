@@ -1,3 +1,4 @@
+float64 sample_time # sensor acquisition time in simulation seconds, BEFORE sensor delay
 float64[3] pos
 float64[3] vel
 float64[3] acc

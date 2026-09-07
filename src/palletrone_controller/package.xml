@@ -10,6 +10,9 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
+  <depend>ament_index_cpp</depend>
+  <depend>yaml-cpp</depend>
+  <depend>eigen</depend>
   <depend>palletrone_interfaces</depend>
 
   <build_depend>eigen3_cmake_module</build_depend>

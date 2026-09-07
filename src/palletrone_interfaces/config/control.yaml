@@ -1,0 +1,60 @@
+# Loaded at startup. Units: m, s, rad, N, Nm. All vectors are [x, y, z].
+controller:
+  position: # position error -> world velocity [m/s]
+    kp: [2.5, 2.5, 3.4]
+    ki: [0.0, 0.0, 0.0]
+    kd: [0.0, 0.0, 0.0]
+    integral_limit: [0.3, 0.3, 0.3]
+    output_limit: [10.0, 10.0, 100.0]
+    derivative_cutoff_hz: 10.0
+  velocity: # world velocity error -> world acceleration [m/s^2]
+    kp: [3.5, 3.5, 8.0]
+    ki: [0.12, 0.12, 2.5]
+    kd: [0.08, 0.08, 0.07]
+    integral_limit: [2.0, 2.0, 2.0]
+    output_limit: [1000.0, 1000.0, 1000.0]
+    derivative_cutoff_hz: 10.0
+  attitude: # body rotation error -> body angular velocity [rad/s]
+    kp: [10.0, 10.0, 4.5]
+    ki: [0.0, 0.0, 0.0]
+    kd: [0.05, 0.05, 0.01]
+    integral_limit: [0.2, 0.2, 0.2]
+    output_limit: [3.84, 3.84, 3.49]
+    derivative_cutoff_hz: 15.0
+  rate: # body angular velocity error -> torque [Nm]
+    kp: [2.2, 2.2, 1.6]
+    ki: [0.0, 0.0, 0.0]
+    kd: [0.04, 0.04, 0.02]
+    integral_limit: [0.4, 0.4, 0.4]
+    output_limit: [4.0, 4.0, 3.0]
+    derivative_cutoff_hz: 20.0
+  force_limit: [30.0, 30.0, 100.0]
+  torque_limit: [5.0, 5.0, 4.0]
+  gyroscopic_feedforward: true
+  max_sample_gap_s: 0.1
+  adaptation_min_height: 0.4 # world Z threshold above the scene floor (Z=0); avoid contact learning
+dob:
+  enabled: true
+  compensate: true
+  cutoff_rad_s: 2.0 # PX4 Q(s)=wc^2/(s^2+sqrt(2)*wc*s+wc^2), NOT Hz
+  estimate_limit: [3.0, 3.0, 3.0]
+moce:
+  enabled: false # initial state; the P key can toggle MOCE during flight
+  estimate_z: false # initial Z-axis state; M enables Z when Lissajous begins
+  force_cutoff_rad_s: 2.0
+  gamma: [0.00007, 0.00007, 0.0022] # PX4 MOCE 2.0 reference gains
+  output_tau_s: 0.15
+  offset_limit: [0.15, 0.15, 0.15]
+  rate_limit: [0.02, 0.02, 0.02] # m/s, projected adaptation
+  min_force: 5.0
+  min_horizontal_force: 0.1 # gate vertical-CoM learning without lateral excitation
+allocator:
+  yaw_split_cutoff_hz: 0.5
+  yaw_reaction_limit: 0.6
+  regularization: 0.00000001
+motor:
+  # MuJoCo actual thrust / allocator nominal thrust, rotors 1..4.
+  thrust_scale: [0.67, 0.67, 0.67, 0.67]
+servo: # simulated inner position servo gains, not geometry
+  kp: 5.0
+  kd: 0.1

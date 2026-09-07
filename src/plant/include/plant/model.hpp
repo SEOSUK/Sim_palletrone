@@ -36,7 +36,9 @@ struct PlantSample {
   Vec3 rpy = Vec3::Zero(), omega = Vec3::Zero(), angular_acceleration = Vec3::Zero();
   Vec3 truth_acceleration = Vec3::Zero(), truth_angular_acceleration = Vec3::Zero();
   Vec3 ou_torque_body = Vec3::Zero(), total_external_torque_body = Vec3::Zero();
+  Vec3 ou_force_body = Vec3::Zero(), total_external_force_body = Vec3::Zero();
   Vec4 servo = Vec4::Zero();
+  Vec4 motor_force = Vec4::Zero();
   double common_effectiveness = 1.0;
   Vec4 actual_thrust_scale = Vec4::Ones();
 };
@@ -55,6 +57,10 @@ class PlantModel {
   const Vec3& ouTorqueBody() const { return ou_torque_body_; }
   const Vec3& totalExternalTorqueBody() const { return total_external_torque_body_; }
   const Vec3& appliedExternalTorqueWorld() const { return applied_external_torque_world_; }
+  const Vec3& ouForceBody() const { return ou_force_body_; }
+  const Vec3& totalExternalForceBody() const { return total_external_force_body_; }
+  const Vec3& appliedExternalForceWorld() const { return applied_external_force_world_; }
+  const Vec3& appliedForcePointWorld() const { return applied_force_point_world_; }
 
  private:
   using ModelPtr = std::unique_ptr<mjModel, decltype(&mj_deleteModel)>;
@@ -68,14 +74,19 @@ class PlantModel {
   Vec4 thrust_scale_ = Vec4::Ones(), motor_force_ = Vec4::Zero();
   Vec3 ou_torque_body_ = Vec3::Zero(), total_external_torque_body_ = Vec3::Zero();
   Vec3 applied_external_torque_world_ = Vec3::Zero();
+  Vec3 ou_force_body_ = Vec3::Zero(), total_external_force_body_ = Vec3::Zero();
+  Vec3 applied_external_force_world_ = Vec3::Zero(), applied_force_point_world_ = Vec3::Zero();
   std::deque<PlantSample> sensor_delay_;
   std::mt19937 rng_;
   std::mt19937 residual_rng_;
+  std::mt19937 residual_force_rng_;
   std::normal_distribution<double> noise_{0, 1};
   std::normal_distribution<double> residual_noise_{0, 1};
+  std::normal_distribution<double> residual_force_noise_{0, 1};
   double last_input_ = 0, next_sample_ = 0, effectiveness_start_time_ = 0;
   PlantSample previous_noisy_;
   bool have_noisy_ = false, effectiveness_started_ = false, residual_started_ = false;
+  bool residual_force_started_ = false;
   Vec3 sensor3(int id) const;
   Vec3 noisy(const Vec3& x, const Vec3& sigma);
 };

@@ -12,3 +12,6 @@ float64[3] truth_acc # raw MuJoCo translational acceleration before noisy finite
 float64[3] truth_a_rpy # raw MuJoCo angular acceleration before noisy finite differences
 float64[3] ou_torque_body # physical OU residual torque in body FLU [Nm]
 float64[3] total_external_torque_body # configured constant plus OU torque [Nm]
+float64[3] ou_force_body # physical OU residual force in body FLU [N]
+float64[3] total_external_force_body # configured constant plus OU force in body FLU [N]
+float64[4] motor_force # post-delay and post-lag physical rotor thrust [N]

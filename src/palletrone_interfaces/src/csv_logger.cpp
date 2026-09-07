@@ -75,7 +75,7 @@ class CsvLogger : public rclcpp::Node {
 
   void writeHeader() {
     csv_ << "time,layout.data_offset";
-    for (int i = 0; i < 110; ++i) csv_ << ",data[" << i << ']';
+    for (int i = 0; i < 124; ++i) csv_ << ",data[" << i << ']';
     csv_ << '\n';
   }
 
@@ -90,7 +90,7 @@ class CsvLogger : public rclcpp::Node {
     }
     const auto nanoseconds = static_cast<int64_t>(
         std::llround(std::max(0.0, status.sample_time - start_time_) * 1e9));
-    std::array<double, 110> data{};
+    std::array<double, 124> data{};
 
     // Match the fixed column indices used by Exp_3_logger.m.
     for (int i = 0; i < 3; ++i) {
@@ -128,6 +128,12 @@ class CsvLogger : public rclcpp::Node {
       data[101 + i] = state_.truth_a_rpy[i];
       data[104 + i] = state_.ou_torque_body[i];
       data[107 + i] = state_.total_external_torque_body[i];
+      data[110 + i] = state_.ou_force_body[i];
+      data[113 + i] = state_.total_external_force_body[i];
+    }
+    for (int i = 0; i < 4; ++i) {
+      data[116 + i] = state_.motor_force[i];
+      data[120 + i] = state_.servo[i];
     }
 
     csv_ << nanoseconds << ",0";

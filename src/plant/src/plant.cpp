@@ -83,10 +83,13 @@ class Plant : public rclcpp::Node {
       msg.truth_a_rpy[i] = s.truth_angular_acceleration[i];
       msg.ou_torque_body[i] = s.ou_torque_body[i];
       msg.total_external_torque_body[i] = s.total_external_torque_body[i];
+      msg.ou_force_body[i] = s.ou_force_body[i];
+      msg.total_external_force_body[i] = s.total_external_force_body[i];
     }
     for (int i = 0; i < 4; ++i) msg.servo[i] = s.servo[i];
     msg.common_effectiveness = s.common_effectiveness;
     for (int i = 0; i < 4; ++i) msg.actual_thrust_scale[i] = s.actual_thrust_scale[i];
+    for (int i = 0; i < 4; ++i) msg.motor_force[i] = s.motor_force[i];
     return msg;
   }
   struct View {

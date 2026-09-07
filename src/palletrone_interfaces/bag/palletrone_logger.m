@@ -84,6 +84,20 @@ else
     eta_common = NaN(N,1);
     actual_thrust_scale = NaN(N,4);
 end
+if size(values,2) >= 117
+    ou_force_body = values(:,112:114);
+    total_external_force_body = values(:,115:117);
+else
+    ou_force_body = NaN(N,3);
+    total_external_force_body = NaN(N,3);
+end
+if size(values,2) >= 125
+    physical_motor_thrust = values(:,118:121);
+    measured_servo_v5 = values(:,122:125);
+else
+    physical_motor_thrust = NaN(N,4);
+    measured_servo_v5 = NaN(N,4);
+end
 if size(values,2) >= 111
     ou_torque_body = values(:,106:108);
     total_external_torque_body = values(:,109:111);

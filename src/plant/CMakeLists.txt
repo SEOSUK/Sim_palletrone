@@ -66,8 +66,16 @@ if(BUILD_TESTING)
   target_link_libraries(residual_torque_test palletrone_plant)
   add_test(NAME colored_residual_torque COMMAND residual_torque_test
     ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/control.yaml
-    ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/model.yaml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/model_identified_v4_torque.yaml
     ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/model_identified_v3_measurement.yaml
+    ${CMAKE_CURRENT_SOURCE_DIR}/xml/scene.xml)
+  add_executable(residual_force_test test/residual_force_test.cpp)
+  ament_target_dependencies(residual_force_test palletrone_interfaces)
+  target_link_libraries(residual_force_test palletrone_plant)
+  add_test(NAME colored_residual_force COMMAND residual_force_test
+    ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/control.yaml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/model.yaml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/model_identified_v4_torque.yaml
     ${CMAKE_CURRENT_SOURCE_DIR}/xml/scene.xml)
   add_test(NAME measurement_uncertainty COMMAND noise_test
     ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/control.yaml
@@ -96,9 +104,14 @@ if(BUILD_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/xml/scene.xml v3_measurement)
   add_test(NAME identified_v4_colored_torque_automated_flight COMMAND drift_validation
     ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/control.yaml
-    ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/model.yaml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/model_identified_v4_torque.yaml
     ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/command.yaml
     ${CMAKE_CURRENT_SOURCE_DIR}/xml/scene.xml v4_colored_torque)
+  add_test(NAME identified_v5_colored_force_automated_flight COMMAND drift_validation
+    ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/control.yaml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/model.yaml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/command.yaml
+    ${CMAKE_CURRENT_SOURCE_DIR}/xml/scene.xml v5_colored_force)
   add_test(NAME native_moce_convergence COMMAND simulation_test
     ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/control_identified_v1.yaml
     ${CMAKE_CURRENT_SOURCE_DIR}/../palletrone_interfaces/config/model_identified_v1.yaml

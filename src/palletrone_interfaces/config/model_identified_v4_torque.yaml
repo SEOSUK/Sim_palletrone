@@ -1,0 +1,47 @@
+# Identified model v4: v3 plus gray-box calibrated colored physical torque residual.
+# This preset is intentionally explicit so historical validation is reproducible.
+model:
+  vehicle_mass: 4.2
+  base_inertia: [0.09062181, 0.05262181, 0.04652020]
+  nominal_inertia: [0.0768, 0.0871, 0.113]
+  payload: {mass: 0.5, position: [0.31, 0.31, 0.56]}
+  initial_com_estimate: [0.0, 0.0, 0.0]
+  gravity: 9.81
+  initial_position: [0.0, 0.0, 0.145]
+  initial_rpy: [0.0, 0.0, 0.0]
+  rotor_mass: 0.2
+  rotor_inertia: [0.0003, 0.0003, 0.0003]
+  rotor_com: [0.0, 0.0, -0.0466612]
+  arm_xy: 0.148492
+  rotor_z: 0.07
+  servo_pivot_offset: 0.075
+  motor:
+    thrust_coefficient: 0.02
+    reaction_ratio: 0.02
+    max_thrust: 50.0
+    delay_s: 0.01
+    time_constant_s: 0.017
+    effectiveness: {enabled: true, initial: 0.6966, slope_per_s: -0.000844, min: 0.63, max: 0.70}
+  servo: {limit_rad: 0.7, dc_gain: 0.994, joint_damping: 0.1, armature: 0.0001, max_torque: 2.0, delay_s: 0.05}
+  sensors:
+    delay_s: 0.0
+    position_std: [0.00019, 0.00022, 0.00017]
+    velocity_std: [0.00473, 0.00500, 0.00368]
+    attitude_std: [0.00071, 0.00067, 0.00044]
+    gyro_std: [0.0236, 0.0215, 0.0174]
+    servo_std: 0.0001
+    seed: 1
+  disturbance: {force_world: [0.0, 0.0, 0.0], torque_body: [0.0, 0.0, 0.0], start_s: 0.0, end_s: 1000000.0}
+  residual_torque:
+    enabled: true
+    frame: body
+    std_nm: [0.0891, 0.0807, 0.0323]
+    correlation_time_s: [0.296, 0.586, 0.616]
+    seed: 1
+  residual_force:
+    enabled: false
+    frame: body
+    std_n: [0.33, 1.18, 0.86]
+    correlation_time_s: [0.27, 0.36, 0.33]
+    seed: 1
+simulation: {physics_hz: 400.0, state_hz: 400.0, realtime_factor: 1.0, viewer_hz: 60.0, command_timeout_s: 0.5}

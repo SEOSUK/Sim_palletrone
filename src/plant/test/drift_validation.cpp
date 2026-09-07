@@ -52,7 +52,8 @@ int main(int argc, char** argv) {
           "drift_validation CONTROL MODEL COMMAND SCENE LABEL [OUTPUT_CSV] [SEED]");
     Config control(argv[1]);
     ModelConfig model{Config(argv[2])};
-    if (argc > 7) model.seed = model.residual_seed = std::stoi(argv[7]);
+    if (argc > 7)
+      model.seed = model.residual_seed = model.residual_force_seed = std::stoi(argv[7]);
     CommandConfig command_config{Config(argv[3])};
     PlantModel plant(argv[4], control, model);
     CascadeController controller(control, model);
@@ -66,7 +67,7 @@ int main(int argc, char** argv) {
     if (argc > 6) {
       csv.open(argv[6]);
       csv << "time,layout.data_offset";
-      for (int i = 0; i < 110; ++i) csv << ",data[" << i << ']';
+      for (int i = 0; i < 124; ++i) csv << ",data[" << i << ']';
       csv << '\n';
       csv << std::setprecision(17);
     }
@@ -116,7 +117,7 @@ int main(int argc, char** argv) {
         complete.add(position_error, attitude_error, output.torque, output.disturbance,
                      model.inertia);
       if (csv) {
-        std::array<double, 110> data{};
+        std::array<double, 124> data{};
         for (int i = 0; i < 3; ++i) {
           data[i] = s.position[i];
           data[i + 3] = reference.position[i];
@@ -151,6 +152,12 @@ int main(int argc, char** argv) {
           data[101 + i] = sampled->truth_angular_acceleration[i];
           data[104 + i] = sampled->ou_torque_body[i];
           data[107 + i] = sampled->total_external_torque_body[i];
+          data[110 + i] = sampled->ou_force_body[i];
+          data[113 + i] = sampled->total_external_force_body[i];
+        }
+        for (int i = 0; i < 4; ++i) {
+          data[116 + i] = sampled->motor_force[i];
+          data[120 + i] = sampled->servo[i];
         }
         csv << static_cast<int64_t>(std::llround(s.time * 1e9)) << ",0";
         for (double value : data) csv << ',' << value;

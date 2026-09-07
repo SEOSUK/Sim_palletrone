@@ -183,6 +183,8 @@ PlantSample PlantModel::truth() const {
   s.rpy = rpyFromRotation(r);
   s.acceleration = Eigen::Map<const Vec3>(data_->qacc);
   s.angular_acceleration = Eigen::Map<const Vec3>(data_->qacc + 3);
+  s.truth_acceleration = s.acceleration;
+  s.truth_angular_acceleration = s.angular_acceleration;
   for (int i = 0; i < 4; ++i) s.servo[i] = data_->qpos[model_->jnt_qposadr[joint_[i]]];
   s.common_effectiveness = commonEffectiveness();
   s.actual_thrust_scale = actualThrustScale();

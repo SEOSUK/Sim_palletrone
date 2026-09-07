@@ -299,6 +299,8 @@ model is enabled and the relative scales are all one, preventing double scaling.
 
 The simulator CSV keeps legacy `data[0]` through `data[92]` unchanged and appends
 `eta_common` at `data[93]` and the four actual thrust scales at `data[94:97]`.
+Raw MuJoCo acceleration and angular acceleration are appended at `data[98:100]` and
+`data[101:103]`; the legacy noisy finite-difference channels remain unchanged.
 
 ---
 

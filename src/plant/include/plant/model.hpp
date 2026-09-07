@@ -34,6 +34,7 @@ struct PlantSample {
   double time = 0;
   Vec3 position = Vec3::Zero(), velocity = Vec3::Zero(), acceleration = Vec3::Zero();
   Vec3 rpy = Vec3::Zero(), omega = Vec3::Zero(), angular_acceleration = Vec3::Zero();
+  Vec3 truth_acceleration = Vec3::Zero(), truth_angular_acceleration = Vec3::Zero();
   Vec4 servo = Vec4::Zero();
   double common_effectiveness = 1.0;
   Vec4 actual_thrust_scale = Vec4::Ones();

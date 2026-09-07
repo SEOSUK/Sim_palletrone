@@ -9,20 +9,28 @@ using namespace palletrone;
 
 struct Accumulator {
   double pos2 = 0, att2 = 0, peak_att = 0, angacc2 = 0, dob = 0;
+  Vec3 attitude_axis2 = Vec3::Zero(), dob_axis2 = Vec3::Zero();
   int count = 0;
   void add(const Vec3& position_error, const Vec3& attitude_error, const Vec3& torque,
            const Vec3& disturbance, const Vec3& inertia) {
     const double att = attitude_error.norm();
     pos2 += position_error.squaredNorm();
     att2 += att * att;
+    attitude_axis2 += attitude_error.cwiseAbs2();
     peak_att = std::max(peak_att, att);
     angacc2 += torque.cwiseQuotient(inertia).squaredNorm();
     dob += disturbance.cwiseQuotient(inertia).norm();
+    dob_axis2 += disturbance.cwiseQuotient(inertia).cwiseAbs2();
     ++count;
   }
   void print(const char* name) const {
     std::cout << name << ',' << std::sqrt(pos2 / count) << ',' << std::sqrt(att2 / count) << ','
               << peak_att << ',' << std::sqrt(angacc2 / count) << ',' << dob / count << '\n';
+  }
+  void printAxes(const char* name) const {
+    std::cout << name << ",attitude_axis_rms," <<
+        (attitude_axis2 / count).cwiseSqrt().transpose() << ",dob_axis_rms," <<
+        (dob_axis2 / count).cwiseSqrt().transpose() << '\n';
   }
 };
 
@@ -41,9 +49,10 @@ int main(int argc, char** argv) {
   try {
     if (argc < 6)
       throw std::runtime_error(
-          "drift_validation CONTROL MODEL COMMAND SCENE LABEL [OUTPUT_CSV]");
+          "drift_validation CONTROL MODEL COMMAND SCENE LABEL [OUTPUT_CSV] [SEED]");
     Config control(argv[1]);
     ModelConfig model{Config(argv[2])};
+    if (argc > 7) model.seed = std::stoi(argv[7]);
     CommandConfig command_config{Config(argv[3])};
     PlantModel plant(argv[4], control, model);
     CascadeController controller(control, model);
@@ -56,8 +65,9 @@ int main(int argc, char** argv) {
     std::ofstream csv;
     if (argc > 6) {
       csv.open(argv[6]);
-      csv << "time,teval,pos_error_norm,att_error_norm,angacc_cmd_norm,dob_accel_norm,com_x,"
-             "com_y,com_z,eta_common,scale_1,scale_2,scale_3,scale_4,moce_enabled,moce_z_enabled\n";
+      csv << "time,layout.data_offset";
+      for (int i = 0; i < 104; ++i) csv << ",data[" << i << ']';
+      csv << '\n';
       csv << std::setprecision(17);
     }
 
@@ -107,13 +117,43 @@ int main(int argc, char** argv) {
         complete.add(position_error, attitude_error, output.torque, output.disturbance,
                      model.inertia);
       if (csv) {
-        csv << s.time << ',' << teval << ',' << position_error.norm() << ','
-            << attitude_error.norm() << ',' << output.torque.cwiseQuotient(model.inertia).norm()
-            << ',' << output.disturbance.cwiseQuotient(model.inertia).norm() << ','
-            << output.com.x() << ',' << output.com.y() << ',' << output.com.z() << ','
-            << sampled->common_effectiveness;
-        for (int i = 0; i < 4; ++i) csv << ',' << sampled->actual_thrust_scale[i];
-        csv << ',' << command.moceEnabled() << ',' << command.moceZEnabled() << '\n';
+        std::array<double, 104> data{};
+        for (int i = 0; i < 3; ++i) {
+          data[i] = s.position[i];
+          data[i + 3] = reference.position[i];
+          data[i + 6] = s.velocity[i];
+          data[i + 9] = reference.velocity[i];
+          data[i + 12] = s.rpy[i];
+          data[i + 15] = reference.rpy[i];
+          data[i + 18] = s.omega[i];
+          data[i + 21] = output.rate_sp[i];
+          data[i + 24] = output.force[i];
+          data[i + 27] = output.torque[i];
+          data[i + 31] = output.disturbance[i];
+          data[i + 42] = sampled->acceleration[i];
+          data[i + 45] = reference.acceleration[i];
+          data[i + 48] = sampled->angular_acceleration[i];
+          data[i + 51] = output.pid_torque[i];
+          data[i + 54] = output.com[i];
+          data[i + 57] = output.com_filtered[i];
+          data[i + 60] = output.com_rate[i];
+        }
+        for (int i = 0; i < 4; ++i) {
+          data[i + 34] = input.speed[i];
+          data[i + 38] = input.angle[i];
+        }
+        data[63] = output.adapting;
+        data[64] = command.moceEnabled();
+        data[65] = command.moceZEnabled();
+        data[93] = sampled->common_effectiveness;
+        for (int i = 0; i < 4; ++i) data[94 + i] = sampled->actual_thrust_scale[i];
+        for (int i = 0; i < 3; ++i) {
+          data[98 + i] = sampled->truth_acceleration[i];
+          data[101 + i] = sampled->truth_angular_acceleration[i];
+        }
+        csv << static_cast<int64_t>(std::llround(s.time * 1e9)) << ",0";
+        for (double value : data) csv << ',' << value;
+        csv << '\n';
       }
     }
     if (!overall.count || !complete.count) throw std::runtime_error("Incomplete metric windows");
@@ -129,10 +169,13 @@ int main(int argc, char** argv) {
     transient2.print("transient2_20_60");
     std::cout << argv[5] << ',';
     complete.print("complete_60_80");
-    std::cout << "final_com," << output.com.transpose() << " final_eta,"
+    complete.printAxes("complete_60_80");
+    std::cout << "final_com," << output.com.transpose() << ",true_com," << model.com.transpose()
+              << ",final_com_error," << (output.com - model.com).norm() << ",final_eta,"
               << plant.commonEffectiveness() << '\n';
   } catch (const std::exception& e) {
     std::cerr << "FAIL: " << e.what() << '\n';
     return 1;
   }
 }
+#include <array>

@@ -1,0 +1,29 @@
+experiment:
+  mode: com_sweep
+  com_scales: [1.00, 1.05, 1.10, 1.15, 1.20, 1.25]
+  trials_per_level: 50
+  base_seed: 7000
+  common_random_numbers: true
+  resume: true
+  process_timeout_s: 120.0
+
+paths:
+  model: src/palletrone_interfaces/config/model.yaml
+  control: src/palletrone_interfaces/config/control.yaml
+  command: src/palletrone_interfaces/config/command.yaml
+  scene: src/plant/xml/scene.xml
+
+logging:
+  save_all_full_csv: false
+  save_failures: true
+  save_representatives: true
+
+success_criteria:
+  max_position_error_m: null
+  max_attitude_error_rad: null
+  max_com_error_m: null
+  max_motor_utilization: null
+  max_servo_angle_rad: null
+
+uncertainties:
+  parameter_randomization_enabled: false

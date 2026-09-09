@@ -17,18 +17,20 @@ import yaml
 
 
 RESULT_FIELDS = [
-    "trial_id", "com_scale", "payload_mass", "payload_pos_x", "payload_pos_y",
+    "trial_id", "replicate_id", "com_scale", "payload_mass", "payload_pos_x", "payload_pos_y",
     "payload_pos_z", "true_com_x", "true_com_y", "true_com_z", "measurement_seed",
     "torque_seed", "force_seed", "position_rms", "position_rms_x", "position_rms_y",
     "position_rms_z", "velocity_rms", "attitude_rms", "attitude_rms_x",
     "attitude_rms_y", "attitude_rms_z", "peak_attitude", "angular_acc_command_rms",
     "mean_dob_norm", "final_com_error", "final_com_error_x", "final_com_error_y",
     "final_com_error_z", "moce_convergence_time", "max_motor_utilization",
-    "max_servo_angle", "saturation_time", "success", "failure_reason", "runtime_s",
+    "max_servo_angle", "saturation_time", "terminal_altitude_m", "terminal_tilt_rad",
+    "terminal_airborne", "numerical_success", "flight_success", "success", "failure_reason",
+    "runtime_s",
 ]
 
 PARAMETER_FIELDS = [
-    "trial_id", "com_scale", "measurement_seed", "torque_seed", "force_seed",
+    "trial_id", "replicate_id", "com_scale", "measurement_seed", "torque_seed", "force_seed",
     "payload_mass", "payload_pos_x", "payload_pos_y", "payload_pos_z", "motor_delay",
     "motor_tau", "effectiveness_initial", "effectiveness_slope", "torque_sigma_x",
     "torque_sigma_y", "torque_sigma_z", "torque_tau_x", "torque_tau_y", "torque_tau_z",
@@ -62,16 +64,19 @@ def trial_plan(config: dict) -> list[dict]:
     else:
         raise ValueError(f"Unsupported experiment.mode: {mode}")
     base = int(experiment["base_seed"])
+    common_random_numbers = bool(experiment.get("common_random_numbers", False))
     plan = []
     for scale in scales:
-        for _ in range(count):
+        for replicate_id in range(count):
             trial_id = len(plan)
+            seed_index = replicate_id if common_random_numbers else trial_id
             plan.append({
                 "trial_id": trial_id,
+                "replicate_id": replicate_id,
                 "com_scale": scale,
-                "measurement_seed": base + 3 * trial_id,
-                "torque_seed": base + 3 * trial_id + 1,
-                "force_seed": base + 3 * trial_id + 2,
+                "measurement_seed": base + 3 * seed_index,
+                "torque_seed": base + 3 * seed_index + 1,
+                "force_seed": base + 3 * seed_index + 2,
             })
     return plan
 
@@ -127,7 +132,7 @@ def rms(values: list[float]) -> float:
     return math.sqrt(sum(x * x for x in values) / len(values))
 
 
-def analyze_log(path: Path, params: dict, criteria: dict, model: dict) -> dict:
+def analyze_log(path: Path, params: dict, criteria: dict, model: dict, control: dict) -> dict:
     samples = []
     with path.open(newline="", encoding="utf-8") as stream:
         for row in csv.DictReader(stream):
@@ -181,6 +186,13 @@ def analyze_log(path: Path, params: dict, criteria: dict, model: dict) -> dict:
     final_values = complete[-1][1]
     final_com = final_values[54:57]
     com_error = [final_com[i] - true_com[i] for i in range(3)]
+    terminal_altitude = final_values[2]
+    # This is the controller's existing contact/airborne boundary, not a fitted
+    # Monte Carlo threshold. The reference trajectory never commands below 0.625 m.
+    airborne_height = float(control["controller"]["adaptation_min_height"])
+    terminal_airborne = terminal_altitude > airborne_height
+    terminal_tilt = math.acos(max(-1.0, min(1.0,
+        math.cos(final_values[12]) * math.cos(final_values[13]))))
     result = dict(params)
     result.update({
         "true_com_x": true_com[0], "true_com_y": true_com[1], "true_com_z": true_com[2],
@@ -196,7 +208,10 @@ def analyze_log(path: Path, params: dict, criteria: dict, model: dict) -> dict:
         "final_com_error_y": com_error[1], "final_com_error_z": com_error[2],
         "moce_convergence_time": math.nan, "max_motor_utilization": max(motor_util),
         "max_servo_angle": max(servo_angle), "saturation_time": sum(saturated_times),
-        "success": True, "failure_reason": "none",
+        "terminal_altitude_m": terminal_altitude, "terminal_tilt_rad": terminal_tilt,
+        "terminal_airborne": terminal_airborne, "numerical_success": True,
+        "flight_success": terminal_airborne, "success": terminal_airborne,
+        "failure_reason": "normal_completion" if terminal_airborne else "loss_of_flight",
     })
 
     com_limit = criteria.get("max_com_error_m")
@@ -220,7 +235,8 @@ def analyze_log(path: Path, params: dict, criteria: dict, model: dict) -> dict:
         ("max_servo_angle_rad", result["max_servo_angle"], "actuator_saturation"),
     ]
     for key, value, reason in checks:
-        if criteria.get(key) is not None and value > float(criteria[key]):
+        if (result["flight_success"] and criteria.get(key) is not None and
+                value > float(criteria[key])):
             result["success"], result["failure_reason"] = False, reason
             break
     return result
@@ -229,8 +245,38 @@ def analyze_log(path: Path, params: dict, criteria: dict, model: dict) -> dict:
 def failed_result(params: dict, reason: str, runtime: float) -> dict:
     row = {field: math.nan for field in RESULT_FIELDS}
     row.update(params)
-    row.update({"success": False, "failure_reason": reason, "runtime_s": runtime})
+    row.update({"terminal_airborne": False, "numerical_success": False,
+                "flight_success": False, "success": False,
+                "failure_reason": reason, "runtime_s": runtime})
     return row
+
+
+def reclassify_legacy_results(path: Path) -> None:
+    """Upgrade summaries made before terminal state fields were introduced.
+
+    Full Stage C logs were intentionally not retained. Exact zero Complete-window
+    DOB activity is used only for this legacy migration: in this stochastic v5
+    model it records that the controller's existing airborne gate stayed false.
+    New runs classify directly from terminal altitude.
+    """
+    rows = read_results(path)
+    if not rows:
+        raise ValueError(f"No result rows to reclassify: {path}")
+    for row in rows:
+        numerical = str(row.get("success", "")).lower() in ("true", "1")
+        loss = numerical and float(row.get("mean_dob_norm", "nan")) == 0.0
+        row.setdefault("replicate_id", row["trial_id"])
+        row.update({
+            "terminal_altitude_m": math.nan,
+            "terminal_tilt_rad": math.nan,
+            "terminal_airborne": not loss if numerical else False,
+            "numerical_success": numerical,
+            "flight_success": numerical and not loss,
+            "success": numerical and not loss,
+            "failure_reason": ("loss_of_flight" if loss else
+                               "normal_completion" if numerical else row["failure_reason"]),
+        })
+    write_table(path, RESULT_FIELDS, rows)
 
 
 def retain_representatives(rows: list[dict], logs: dict[int, Path], destination: Path) -> None:
@@ -238,7 +284,8 @@ def retain_representatives(rows: list[dict], logs: dict[int, Path], destination:
     scales = sorted({float(r["com_scale"]) for r in rows})
     for scale in scales:
         eligible = sorted((r for r in rows if float(r["com_scale"]) == scale and
-                           str(r["success"]).lower() == "true" and int(r["trial_id"]) in logs),
+                           str(r["success"]).lower() == "true" and
+                           int(r["trial_id"]) in logs),
                           key=lambda r: float(r["position_rms"]))
         if not eligible:
             continue
@@ -260,7 +307,12 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path,
                         help="Override monte directory (useful for smoke tests)")
     parser.add_argument("--plan", action="store_true", help="Print deterministic plan and exit")
+    parser.add_argument("--reclassify-results", type=Path,
+                        help="Upgrade an existing pre-classifier summary in place and exit")
     args = parser.parse_args()
+    if args.reclassify_results:
+        reclassify_legacy_results(args.reclassify_results.resolve())
+        return 0
     config = load_yaml(args.config.resolve())
     plan = trial_plan(config)
     if args.plan:
@@ -281,6 +333,7 @@ def main() -> int:
     results_path = monte_dir / "results/monte_carlo_results.csv"
     parameters_path = monte_dir / "results/monte_carlo_parameters.csv"
     baseline = load_yaml(model_path)
+    control = load_yaml(control_path)
     parameter_rows = [parameter_row(trial, baseline) for trial in plan]
     write_table(parameters_path, PARAMETER_FIELDS, parameter_rows)
 
@@ -298,7 +351,8 @@ def main() -> int:
             int(row["torque_seed"]) == trial["torque_seed"],
             int(row["force_seed"]) == trial["force_seed"],
         ])
-        if resume and same_definition and str(row.get("success", "")).lower() == "true":
+        numerical_success = row.get("numerical_success", row.get("success", ""))
+        if resume and same_definition and str(numerical_success).lower() in ("true", "1"):
             completed[trial_id] = row
     completed = {trial_id: row for trial_id, row in completed.items() if trial_id in planned_ids}
     rows = dict(completed)
@@ -334,7 +388,8 @@ def main() -> int:
                 if process.returncode != 0:
                     row = failed_result(params, "process_crash", runtime)
                 else:
-                    row = analyze_log(log_file, params, config.get("success_criteria", {}), baseline)
+                    row = analyze_log(log_file, params, config.get("success_criteria", {}),
+                                      baseline, control)
                     row["runtime_s"] = runtime
             except subprocess.TimeoutExpired:
                 runtime = time.monotonic() - started

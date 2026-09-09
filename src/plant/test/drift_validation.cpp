@@ -49,11 +49,15 @@ int main(int argc, char** argv) {
   try {
     if (argc < 6)
       throw std::runtime_error(
-          "drift_validation CONTROL MODEL COMMAND SCENE LABEL [OUTPUT_CSV] [SEED]");
+          "drift_validation CONTROL MODEL COMMAND SCENE LABEL [OUTPUT_CSV] "
+          "[MEASUREMENT_SEED [TORQUE_SEED FORCE_SEED]]");
     Config control(argv[1]);
     ModelConfig model{Config(argv[2])};
-    if (argc > 7)
-      model.seed = model.residual_seed = model.residual_force_seed = std::stoi(argv[7]);
+    if (argc > 7) model.seed = std::stoi(argv[7]);
+    // Keep the historical single-seed CLI compatible while allowing Monte Carlo
+    // trials to drive the three independent RNG streams separately.
+    model.residual_seed = argc > 8 ? std::stoi(argv[8]) : model.seed;
+    model.residual_force_seed = argc > 9 ? std::stoi(argv[9]) : model.seed;
     CommandConfig command_config{Config(argv[3])};
     PlantModel plant(argv[4], control, model);
     CascadeController controller(control, model);

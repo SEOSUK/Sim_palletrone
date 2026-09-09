@@ -1,0 +1,1 @@
+trial_id,com_scale,measurement_seed,torque_seed,force_seed,payload_mass,payload_pos_x,payload_pos_y,payload_pos_z,motor_delay,motor_tau,effectiveness_initial,effectiveness_slope,torque_sigma_x,torque_sigma_y,torque_sigma_z,torque_tau_x,torque_tau_y,torque_tau_z,force_sigma_x,force_sigma_y,force_sigma_z,force_tau_x,force_tau_y,force_tau_z

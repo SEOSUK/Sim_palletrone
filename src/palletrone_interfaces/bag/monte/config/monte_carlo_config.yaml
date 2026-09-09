@@ -1,0 +1,42 @@
+experiment:
+  # pipeline_debug: scale 1.0 / 10 default trials
+  # stochastic_repeatability: scale 1.0 / 50 default trials
+  # com_sweep: configured scales and trials_per_level
+  mode: com_sweep
+  com_scales: [0.0, 0.5, 0.75, 1.0, 1.25, 1.5]
+  trials_per_level: 20
+  base_seed: 1000
+  resume: true
+  process_timeout_s: 120.0
+
+paths:
+  model: src/palletrone_interfaces/config/model.yaml
+  control: src/palletrone_interfaces/config/control.yaml
+  command: src/palletrone_interfaces/config/command.yaml
+  scene: src/plant/xml/scene.xml
+
+logging:
+  save_all_full_csv: false
+  save_failures: true
+  save_representatives: true
+
+# A null threshold is descriptive only and never causes automatic failure.
+success_criteria:
+  max_position_error_m: null
+  max_attitude_error_rad: null
+  max_com_error_m: null
+  max_motor_utilization: null
+  max_servo_angle_rad: null
+
+uncertainties:
+  parameter_randomization_enabled: false
+  payload_mass: {enabled: false, distribution: uniform, min: null, max: null}
+  motor_delay: {enabled: false, distribution: normal, mean: 0.010, std: null}
+  motor_tau: {enabled: false, distribution: normal, mean: 0.017, std: null}
+  servo_delay: {enabled: false, distribution: normal, mean: 0.050, std: null}
+  servo_dynamics: {enabled: false}
+  thrust_effectiveness: {enabled: false}
+  residual_torque_sigma: {enabled: false}
+  residual_torque_tau: {enabled: false}
+  residual_force_sigma: {enabled: false}
+  residual_force_tau: {enabled: false}

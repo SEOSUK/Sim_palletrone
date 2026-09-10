@@ -29,7 +29,7 @@ command:
     center: [0.0, 0.0, 0.7] # automated-experiment hover center [m]
     amplitude: [0.15, 0.35, 0.075] # [m]
     frequency_hz: [0.30, 0.15, 0.60]
-    phase_rad: [0.0, 0.0, 1.57079632679] # z cosine
+    phase_rad: [3.14159265359, 3.14159265359, 1.57079632679] # reverse initial X/Y direction; z cosine
     repeat: true
     duration_s: 30.0 # used only when repeat=false
     finish_behavior: hold # hold or reset
@@ -55,5 +55,5 @@ visualization:
     true_scale: 0.06
     payload_dimensions: [0.20, 0.12, 0.08] # RViz cuboid size [x, y, z] [m]
     estimated_rgba: [1.0, 0.15, 0.05, 1.0]
-    true_rgba: [0.05, 0.85, 0.20, 1.0]
+    true_rgba: [0.05, 0.30, 1.0, 1.0]
     payload_rgba: [0.10, 1.0, 0.10, 1.0]

@@ -1,24 +1,45 @@
 Panels:
   - Class: rviz_common/Displays
+    Help Height: 70
     Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /Ground grid1
+      Splitter Ratio: 0.5
+    Tree Height: 361
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
     Name: Views
+    Splitter Ratio: 0.5
 Visualization Manager:
   Class: ""
   Displays:
     - Alpha: 0.5
       Cell Size: 1
       Class: rviz_default_plugins/Grid
-      Color: 160; 160; 164
+      Color: 119; 118; 123
       Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
       Name: Ground grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
       Plane: XY
       Plane Cell Count: 20
       Reference Frame: world
       Value: true
-    - Class: rviz_default_plugins/RobotModel
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
       Description Source: Topic
       Description Topic:
         Depth: 5
@@ -27,25 +48,64 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /robot_description
       Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        prop1_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        prop2_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        prop3_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        prop4_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Mass Properties:
+        Inertia: false
+        Mass: false
       Name: Palletrone robot model
-      Visual Enabled: true
-      Collision Enabled: false
+      TF Prefix: ""
+      Update Interval: 0
       Value: true
+      Visual Enabled: true
     - Class: rviz_default_plugins/TF
-      Enabled: true
+      Enabled: false
       Frame Timeout: 15
       Frames:
         All Enabled: true
-      Marker Scale: 0.35
+      Marker Scale: 0.3499999940395355
       Name: Pose and command TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
-      Tree: {}
+      Tree:
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/Marker
       Enabled: true
+      Name: Estimated CoM (MOCE)
+      Namespaces:
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -53,12 +113,12 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /palletrone/estimated_com_marker
-      Name: Estimated CoM (MOCE)
-      Namespaces:
-        palletrone_com: true
       Value: true
     - Class: rviz_default_plugins/Marker
       Enabled: true
+      Name: Payload position
+      Namespaces:
+        palletrone_com: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -66,12 +126,12 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /palletrone/payload_marker
-      Name: Payload position
-      Namespaces:
-        palletrone_com: true
       Value: true
     - Class: rviz_default_plugins/Marker
       Enabled: true
+      Name: True CoM
+      Namespaces:
+        palletrone_com: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -79,40 +139,59 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /palletrone/true_com_marker
-      Name: True CoM
-      Namespaces:
-        palletrone_com: true
       Value: true
   Enabled: true
   Global Options:
-    Background Color: 48; 48; 48
+    Background Color: 153; 193; 241
     Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
     - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
     - Class: rviz_default_plugins/MoveCamera
     - Class: rviz_default_plugins/Select
     - Class: rviz_default_plugins/FocusCamera
     - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
   Transformation:
     Current:
       Class: rviz_default_plugins/TF
+  Value: true
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 8
+      Distance: 3.661733388900757
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 3
+        X: -0.060771215707063675
+        Y: 0.09053248167037964
+        Z: 0.9465247988700867
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
       Name: Current View
-      Near Clip Distance: 0.01
-      Pitch: 0.45
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.03500016778707504
       Target Frame: world
-      Yaw: 0.8
+      Value: Orbit (rviz_default_plugins)
+      Yaw: 3.159991979598999
+    Saved: ~
 Window Geometry:
-  Height: 900
-  Width: 1440
-  X: 80
-  Y: 40
+  Displays:
+    collapsed: true
+  Height: 1016
+  Hide Left Dock: true
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd0000000100000000000001cb0000039efc0200000003fb000000100044006900730070006c006100790073000000003d000001ec000000c900fffffffb0000001200530065006c0065006300740069006f006e000000022f000000900000005c00fffffffb0000000a0056006900650077007300000002c500000116000000a400ffffff0000039d0000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: true
+  Views:
+    collapsed: true
+  Width: 925
+  X: 995
+  Y: 27

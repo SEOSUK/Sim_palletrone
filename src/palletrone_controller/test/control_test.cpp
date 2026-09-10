@@ -182,20 +182,20 @@ int main(int argc, char** argv) {
     experiment.at(ascent_end + command_config.experiment_moce_start - 1e-6);
     check(!experiment.moceEnabled(), "MOCE remains off before the scheduled hover time");
     experiment.at(ascent_end + command_config.experiment_moce_start);
-    check(experiment.moceEnabled() && !experiment.moceZEnabled(),
-          "Only X/Y MOCE turn on at the scheduled hover time");
+    check(!experiment.moceEnabled() && !experiment.moceZEnabled(),
+          "MOCE remains off throughout automated hover");
     const double curve_start = ascent_end + command_config.experiment_hover_duration;
     const auto curve = experiment.at(curve_start);
     const Vec3 expected_curve_start =
         command_config.center +
         command_config.amplitude.cwiseProduct(command_config.phase.array().sin().matrix());
-    check(experiment.moceEnabled() && experiment.moceZEnabled() &&
+    check(!experiment.moceEnabled() && !experiment.moceZEnabled() &&
               (curve.position - expected_curve_start).norm() < 1e-12 &&
               (curve.velocity -
                command_config.amplitude.cwiseProduct(
                    (2 * M_PI * command_config.frequency.array()).matrix())
                    .cwiseProduct(command_config.phase.array().cos().matrix())).norm() < 1e-12,
-          "Automated experiment starts analytical Lissajous and Z-axis MOCE");
+          "Automated experiment starts analytical Lissajous with MOCE disabled");
     const double curve_end = curve_start + command_config.experiment_lissajous_duration;
     const auto finish = experiment.at(curve_end);
     check(!experiment.automatedExperimentActive() &&

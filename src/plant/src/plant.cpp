@@ -121,11 +121,14 @@ class Plant : public rclcpp::Node {
     mjr_defaultContext(&context);
     mjv_makeScene(view.model, &view.scene, 2000);
     mjr_makeContext(view.model, &context, mjFONTSCALE_150);
-    view.camera.type = mjCAMERA_TRACKING;
-    view.camera.trackbodyid = mj_name2id(view.model, mjOBJ_BODY, "base");
-    view.camera.distance = 2;
-    view.camera.azimuth = 110;
-    view.camera.elevation = -30;
+    view.camera.type = mjCAMERA_FREE;
+    view.camera.lookat[0] = 0.0;
+    view.camera.lookat[1] = 0.0;
+    view.camera.lookat[2] = 0.7;
+    // Start with a wide, nearly level front view similar to the lab camera.
+    view.camera.distance = 3.6;
+    view.camera.azimuth = 0;
+    view.camera.elevation = -8;
     glfwSetWindowUserPointer(window, &view);
     glfwSetScrollCallback(window, [](GLFWwindow* w, double, double dy) {
       auto* v = static_cast<View*>(glfwGetWindowUserPointer(w));

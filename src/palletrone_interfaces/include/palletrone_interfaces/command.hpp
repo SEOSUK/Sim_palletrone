@@ -207,6 +207,9 @@ class CommandGenerator {
 
  private:
   CommandReference automatedExperiment(double time) {
+    // The M-key sequence is an MOCE-off baseline experiment.
+    moce_enabled_ = false;
+    moce_z_enabled_ = false;
     const double elapsed = std::max(0.0, time - experiment_start_);
     if (elapsed < config_.experiment_ascent_duration) {
       const double u = elapsed / config_.experiment_ascent_duration;
@@ -225,7 +228,6 @@ class CommandGenerator {
     }
     const double hover_elapsed = elapsed - config_.experiment_ascent_duration;
     if (hover_elapsed < config_.experiment_hover_duration) {
-      if (hover_elapsed >= config_.experiment_moce_start) moce_enabled_ = true;
       CommandReference output;
       output.position = config_.experiment_hover_position;
       output.rpy = experiment_start_rpy_;
@@ -233,8 +235,6 @@ class CommandGenerator {
     }
     const double curve_elapsed = hover_elapsed - config_.experiment_hover_duration;
     if (curve_elapsed < config_.experiment_lissajous_duration) {
-      moce_enabled_ = true;
-      moce_z_enabled_ = true;
       return lissajous(curve_elapsed);
     }
     automated_experiment_ = false;

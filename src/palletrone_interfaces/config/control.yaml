@@ -42,7 +42,7 @@ moce:
   enabled: false # initial state; the P key can toggle MOCE during flight
   estimate_z: false # initial Z-axis state; M enables Z when Lissajous begins
   force_cutoff_rad_s: 2.0
-  gamma: [7.0e-6, 7.0e-6, 2.2e-4] # PX4 MOCE 2.0 reference gains
+  gamma: [7.0e-6, 7.0e-6, 1.5e-4] # PX4 MOCE 2.0 reference gains
   output_tau_s: 0.15
   offset_limit: [0.15, 0.15, 0.15]
   rate_limit: [0.02, 0.02, 0.02] # m/s, projected adaptation

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import json
 import math
 import shutil
@@ -37,6 +38,13 @@ PARAMETER_FIELDS = [
     "force_sigma_x", "force_sigma_y", "force_sigma_z", "force_tau_x", "force_tau_y",
     "force_tau_z",
 ]
+
+
+def copy_log_compressed(source: Path, destination: Path) -> None:
+    """Preserve a full CSV log without exhausting storage during large sweeps."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with source.open("rb") as source_stream, gzip.open(destination, "wb") as destination_stream:
+        shutil.copyfileobj(source_stream, destination_stream)
 
 
 def repository_root() -> Path:
@@ -136,7 +144,10 @@ def analyze_log(path: Path, params: dict, criteria: dict, model: dict, control: 
     samples = []
     with path.open(newline="", encoding="utf-8") as stream:
         for row in csv.DictReader(stream):
-            values = [float(row[f"data[{i}]"]) for i in range(124)]
+            raw_values = [row.get(f"data[{i}]") for i in range(124)]
+            if any(value is None or value == "" for value in raw_values):
+                raise ValueError("experiment_incomplete")
+            values = [float(value) for value in raw_values]
             timestamp = float(row["time"]) * 1e-9
             if not math.isfinite(timestamp) or not all(math.isfinite(x) for x in values):
                 raise FloatingPointError("NaN or Inf in trajectory")
@@ -294,8 +305,8 @@ def retain_representatives(rows: list[dict], logs: dict[int, Path], destination:
                   (eligible[-1], "worst_success")]
         for row, label in chosen:
             trial_id = int(row["trial_id"])
-            name = f"trial_{trial_id:04d}_com_{scale:.2f}_{label}.csv"
-            shutil.copy2(logs[trial_id], destination / name)
+            name = f"trial_{trial_id:04d}_com_{scale:.2f}_{label}.csv.gz"
+            copy_log_compressed(logs[trial_id], destination / name)
 
 
 def main() -> int:
@@ -406,12 +417,14 @@ def main() -> int:
                 fresh_logs[trial_id] = log_file
                 if not row["success"] and logging.get("save_failures", True):
                     failure_dir.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(log_file, failure_dir /
-                                 f"trial_{trial_id:04d}_com_{trial['com_scale']:.2f}_failure.csv")
+                    copy_log_compressed(
+                        log_file,
+                        failure_dir /
+                        f"trial_{trial_id:04d}_com_{trial['com_scale']:.2f}_failure.csv.gz")
                 if logging.get("save_all_full_csv", False):
                     all_dir = monte_dir / "logs/all"
                     all_dir.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(log_file, all_dir / f"trial_{trial_id:04d}.csv")
+                    copy_log_compressed(log_file, all_dir / f"trial_{trial_id:04d}.csv.gz")
             ordered = [rows[i] for i in sorted(rows)]
             write_table(results_path, RESULT_FIELDS, ordered)
             print(f"DONE trial {trial_id}: {row['failure_reason']}")

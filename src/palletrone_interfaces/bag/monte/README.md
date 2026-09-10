@@ -1,4 +1,4 @@
-# v5 CoM-bias Monte Carlo pipeline
+# v6 CRN CoM-bias Monte Carlo validation
 
 ## Purpose and frozen baseline
 
@@ -11,9 +11,9 @@ metrics.
 The runner reads the existing v5 `model.yaml` and changes only the payload arm
 and the three RNG seeds. Controller/DOB/MOCE parameters, inertias, actuator
 dynamics, effectiveness drift, measurement uncertainty, and calibrated torque
-and force OU parameters remain unchanged. Parameter randomization is explicitly
-disabled in the first implementation; its config entries reserve a future
-schema and controller parameters are intentionally absent.
+and force OU parameters remain unchanged. Parameter randomization was explicitly
+disabled throughout the completed validation; controller parameters are
+intentionally absent from the uncertainty schema.
 
 ## Layout
 
@@ -47,8 +47,9 @@ and `process_timeout_s` applies independently to every subprocess.
 Modes are `pipeline_debug` (scale 1.0, default 10 trials),
 `stochastic_repeatability` (scale 1.0, default 50 trials), and `com_sweep`.
 For the latter, `com_scales` and `trials_per_level` define the population.
-The provided `monte_carlo_fine_config.yaml` defines, but does not automatically
-run, the 300-trial boundary-refinement experiment.
+The completed final experiment used `monte_carlo_fine_config.yaml`: 50 CRN
+replicates at each of scales 1.00, 1.05, 1.10, 1.15, 1.20, and 1.25, for 300
+trials in total.
 
 ## CoM and seed policy
 
@@ -61,8 +62,7 @@ c_true = payload_mass / (vehicle_mass + payload_mass) * r_payload_trial
 
 Scaling the payload arm is a controlled severity sweep rather than a statement
 that one physical payload slides along this line. It preserves direction and
-gives a clear zero-bias reference; a later experiment may instead specify
-independently measured payload locations.
+gives a controlled axis for evaluating increasing CoM-bias severity.
 
 With `common_random_numbers: false`, trial `i` uses
 `base_seed + 3*i + {0,1,2}` for measurement, torque OU, and force OU respectively.
@@ -115,8 +115,23 @@ All full trajectories are temporary by default. Physical-loss and numerical-
 failure logs are retained when enabled. For each CoM level, overall-successful
 trials created in the current run are
 ranked by Complete-window position RMS; minimum, nearest sample median, and
-maximum are copied as best, median, and worst-success representatives. Log CSVs
-are git-ignored; `.gitkeep` preserves the directories.
+maximum are copied as best, median, and worst-success representatives. Retained
+logs may be gzip-compressed as `.csv.gz`; trajectory files are git-ignored and
+`.gitkeep` preserves the directories.
+
+## Final CRN fine-sweep result
+
+All 300 trials completed numerically. Physical loss counts were 0, 0, 0, 1, 4,
+and 30 out of 50 at scales 1.00 through 1.25 respectively, giving empirical
+loss probabilities of 0.00, 0.00, 0.00, 0.02, 0.08, and 0.60. The probabilistic
+robustness transition under the calibrated stochastic v5 model is concentrated
+between scales 1.20 and 1.25; an exploratory logistic fit estimated the 50%
+loss scale as 1.2429.
+
+Airborne-only tracking remained comparatively stable through scale 1.25. The
+primary observed phenomenon was a stochastic normal-flight / catastrophic-loss
+bifurcation rather than smooth tracking degradation. These simulation results
+are not a guaranteed physical-system robustness boundary.
 
 In MATLAB, run `monte_carlo_analyzer` from this directory (or add it to the
 path). It reads `results/monte_carlo_results.csv`, prints numerical completion,

@@ -41,22 +41,22 @@ Main updates:
 
 The payload-induced CoM offset is computed as
 
-$$
+```math
 \mathbf c
 =
 \frac{m_p}{m_v+m_p}\mathbf r_p.
-$$
+```
 
 Rigid-body inertia was identified from
 
-$$
+```math
 \boldsymbol{\tau}
 =
 \mathbf J\dot{\boldsymbol{\omega}}
 +
 \boldsymbol{\omega}\times
 \mathbf J\boldsymbol{\omega},
-$$
+```
 
 using filtered flight angular-rate data and least-squares fitting.
 
@@ -76,11 +76,11 @@ servo:
 
 The actuator dynamics were approximated using a first-order-plus-dead-time model,
 
-$$
+```math
 G(s)
 =
 \frac{K}{\tau s+1}e^{-T_ds}.
-$$
+```
 
 ---
 
@@ -91,30 +91,30 @@ during flight.
 
 The instantaneous effectiveness proxy was estimated from
 
-$$
+```math
 \eta_T(t)
 \approx
 \frac{m\|\mathbf a_{\mathrm{specific}}(t)\|}
 {\|\mathbf F_{\mathrm{cmd}}(t)\|}.
-$$
+```
 
 A linear trend across repeated flight logs was fitted as
 
-$$
+```math
 \eta_T(t)
 \approx
 0.6966 - 8.44\times10^{-4}t.
-$$
+```
 
 The implemented rotor thrust is
 
-$$
+```math
 T_{i,\mathrm{actual}}
 =
 \eta_{\mathrm{common}}(t)
 \eta_i
 T_{i,\mathrm{nominal}}.
-$$
+```
 
 This effect increased late-flight position tracking error toward the real-flight
 level, but did not explain the persistent rotational activity observed in hardware.
@@ -128,21 +128,21 @@ state-estimator outputs.
 
 For each logged state signal,
 
-$$
+```math
 \mathbf r_y(t)
 =
 \mathbf y(t)
 -
 \mathrm{LPF}_{2\,\mathrm{Hz}}\{\mathbf y(t)\},
-$$
+```
 
 and the effective uncertainty level was estimated as
 
-$$
+```math
 \boldsymbol{\sigma}_y
 =
 \mathrm{std}\big(\mathbf r_y(t)\big).
-$$
+```
 
 Representative standard deviations:
 
@@ -172,19 +172,19 @@ Ornstein-Uhlenbeck torque process.
 
 The torque residual was characterized from the converged flight interval using
 
-$$
+```math
 \mathbf r_\tau
 \approx
 \hat{\mathbf d}_{\tau,\mathrm{real}}
 -
 \hat{\mathbf d}_{\tau,\mathrm{sim}},
-$$
+```
 
 with its standard deviation and autocorrelation used as calibration targets.
 
 The OU process is
 
-$$
+```math
 d_{k+1}
 =
 a d_k
@@ -192,7 +192,7 @@ a d_k
 \sigma\sqrt{1-a^2}\,\xi_k,
 \qquad
 a=e^{-\Delta t/\tau}.
-$$
+```
 
 Final gray-box calibrated parameters:
 
@@ -223,28 +223,28 @@ remained substantially cleaner than the hardware result.
 
 The physical force proxy was reconstructed as
 
-$$
+```math
 \mathbf F_{\mathrm{actual}}
 =
 m\,\mathbf a_{\mathrm{specific}},
-$$
+```
 
 and the residual force was defined as
 
-$$
+```math
 \mathbf r_F
 =
 \mathbf F_{\mathrm{actual}}
 -
 \mathbf F_{\mathrm{predicted}},
-$$
+```
 
 where $\mathbf F_{\mathrm{predicted}}$ includes the identified thrust
 effectiveness, motor delay, motor first-order lag, and measured servo geometry.
 
 The unexplained residual magnitude was initialized using variance subtraction,
 
-$$
+```math
 \sigma_{\mathrm{missing}}
 =
 \sqrt{
@@ -252,7 +252,7 @@ $$
 -
 \sigma_{\mathrm{v4}}^2
 }.
-$$
+```
 
 A zero-mean body-frame OU force model was then gray-box calibrated using the
 residual-force STD and ACF statistics.
@@ -293,65 +293,64 @@ candidate**, rather than a uniquely identified physical truth.
 
 ---
 
-## v6 — Monte Carlo Robustness Validation [TODO]
+## v6 — CRN Monte Carlo Robustness Validation
 
-The next stage is not additional nominal flight-data fitting.
+The flight-data-calibrated v5 model was frozen as the baseline for the final
+Monte Carlo robustness validation. No parameter-uncertainty randomization was
+performed: payload mass, actuator dynamics, thrust-effectiveness drift,
+controller/DOB/MOCE settings, inertias, and calibrated residual-process
+parameters remained fixed. Stochastic variation came only from independent
+measurement-noise, torque-OU, and force-OU realizations. Payload-offset/CoM-bias
+severity was the primary experimental axis.
 
-Instead, the identified v5 model will be used as the baseline simulation model,
-and uncertainty will be propagated through Monte Carlo trials.
+The validation proceeded in four stages:
 
-A randomized model instance can be written conceptually as
+- Stage A: 10-trial pipeline validation
+- Stage B: 50-trial stochastic baseline
+- Stage C: 120-trial coarse CoM sweep
+- Final: 300-trial Common Random Numbers (CRN) fine sweep
 
-$$
-\boldsymbol{\theta}^{(j)}
-=
-\boldsymbol{\theta}_{\mathrm{nom}}
-+
-\Delta\boldsymbol{\theta}^{(j)},
-$$
+The final sweep used 50 paired replicates at each scale:
 
-where $\boldsymbol{\theta}$ includes payload, actuator, sensor, thrust, and
-residual-dynamics parameters.
+```text
+com_scale: [1.00, 1.05, 1.10, 1.15, 1.20, 1.25]
+trials per scale: 50
+total trials: 300
+common random numbers: enabled
+```
 
-For $N$ trials, robustness metrics will be summarized using statistics such as
+Numerical completion was recorded separately from physical flight success. A
+numerically completed trajectory was considered airborne when
+`terminal_altitude > adaptation_min_height`, where
+`adaptation_min_height = 0.4 m`; otherwise it was classified as
+`loss_of_flight`.
 
-$$
-P_{\mathrm{success}}
-=
-\frac{N_{\mathrm{success}}}{N},
-$$
+| CoM scale | Loss / 50 | P_loss |
+|---:|---:|---:|
+| 1.00 | 0 | 0.00 |
+| 1.05 | 0 | 0.00 |
+| 1.10 | 0 | 0.00 |
+| 1.15 | 1 | 0.02 |
+| 1.20 | 4 | 0.08 |
+| 1.25 | 30 | 0.60 |
 
-and percentile performance bounds,
+No physical loss was observed through scale 1.10; the first loss appeared at
+1.15, followed by 8% loss at 1.20 and 60% at 1.25. The empirical probabilistic
+robustness transition is therefore concentrated between scales 1.20 and 1.25.
+An exploratory logistic fit placed the 50% loss scale at 1.2429; the empirical
+proportions remain the primary result.
 
-$$
-q_{95}
-=
-\mathrm{percentile}_{95}
-\left(
-\{J^{(1)},\dots,J^{(N)}\}
-\right).
-$$
+Conditioned on trajectories that remained airborne, tracking performance stayed
+comparatively stable through scale 1.25. The dominant robustness phenomenon was
+therefore not gradual tracking degradation, but a stochastic normal-flight /
+catastrophic-loss bifurcation under the calibrated stochastic v5 model.
 
-Candidate randomized parameters include:
+These results describe a probabilistic robustness boundary in a
+flight-data-calibrated simulation model. They are not a guaranteed boundary or
+an experimentally measured physical-system failure probability.
 
-- payload mass and CoM offset
-- common thrust effectiveness
-- rotor-to-rotor thrust asymmetry
-- motor delay and time constant
-- servo dynamics
-- measurement uncertainty
-- colored torque residual
-- colored force residual
-
-The main objectives are to evaluate:
-
-- MOCE convergence probability
-- CoM estimation error
-- position and attitude tracking error
-- actuator saturation
-- disturbance-estimation behavior
-- failure / instability rate
-- percentile-based performance bounds
+Parameter-uncertainty randomization and alternative sampling designs such as
+Latin hypercube sampling remain outside the scope of this completed validation.
 
 ---
 
@@ -368,9 +367,8 @@ v4  Colored torque residual
  ↓
 v5  Colored force residual
  ↓
-v6  Monte Carlo robustness validation
+v6  CRN Monte Carlo robustness validation
 ```
 
-The goal is not to make MuJoCo reproduce one flight exactly, but to construct a
-reproducible, flight-data-grounded simulation environment for evaluating
-controller robustness under realistic model uncertainty.
+The result is a reproducible, flight-data-calibrated simulation workflow for
+Monte Carlo robustness validation under the modeled stochastic conditions.

@@ -176,7 +176,7 @@ def write_csv(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fields = list(dict.fromkeys(key for row in rows for key in row))
     with path.open("w", newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(stream, fields); writer.writeheader(); writer.writerows(rows)
+        writer = csv.DictWriter(stream, fields, lineterminator="\n"); writer.writeheader(); writer.writerows(rows)
 
 
 def run_variant(config_path: Path, config: dict, variant: dict, output: Path, executable: Path) -> None:

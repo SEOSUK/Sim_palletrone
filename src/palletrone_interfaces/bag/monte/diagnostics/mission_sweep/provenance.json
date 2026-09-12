@@ -1,0 +1,11 @@
+{
+  "base_git_commit": "811e4feed669f233e25eea99f25ee43845811baf",
+  "branch": "palletrone",
+  "payload_mass_kg": 0.5,
+  "base_seed": 7000,
+  "common_random_numbers": true,
+  "replicates_per_scale": 5,
+  "scales": [1.0, 1.1, 1.2, 1.25, 1.3, 1.35],
+  "command": "python3 src/plant/test/monte_carlo_runner.py --config src/palletrone_interfaces/bag/monte/diagnostics/config/mission_sweep.yaml --output-dir src/palletrone_interfaces/bag/monte/diagnostics/mission_sweep",
+  "note": "Run used the uncommitted diagnostic mission_moce option subsequently included in the mission diagnostics commit."
+}

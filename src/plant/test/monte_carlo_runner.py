@@ -115,7 +115,7 @@ def write_table(path: Path, fields: list[str], rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
     with temporary.open("w", newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(stream, fieldnames=fields, extrasaction="ignore")
+        writer = csv.DictWriter(stream, fieldnames=fields, extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     temporary.replace(path)
@@ -392,6 +392,7 @@ def main() -> int:
                        str(command_path), str(scene_path), f"mc_{trial_id}", str(log_file),
                        str(trial["measurement_seed"]), str(trial["torque_seed"]),
                        str(trial["force_seed"])]
+            command.extend(str(x) for x in config["experiment"].get("executable_args", []))
             started = time.monotonic()
             try:
                 process = subprocess.run(command, capture_output=True, text=True, timeout=timeout)

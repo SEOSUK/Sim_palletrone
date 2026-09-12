@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     if (argc < 6)
       throw std::runtime_error(
           "drift_validation CONTROL MODEL COMMAND SCENE LABEL [OUTPUT_CSV] "
-          "[MEASUREMENT_SEED [TORQUE_SEED FORCE_SEED]]");
+          "[MEASUREMENT_SEED [TORQUE_SEED FORCE_SEED]] [mission_moce|command_moce]");
     Config control(argv[1]);
     ModelConfig model{Config(argv[2])};
     if (argc > 7) model.seed = std::stoi(argv[7]);
@@ -59,11 +59,22 @@ int main(int argc, char** argv) {
     model.residual_seed = argc > 8 ? std::stoi(argv[8]) : model.seed;
     model.residual_force_seed = argc > 9 ? std::stoi(argv[9]) : model.seed;
     CommandConfig command_config{Config(argv[3])};
+    // Preserve the historical validation/Monte-Carlo MOCE-on sequence even
+    // though the interactive M-key command now defaults to MOCE-off. Diagnostics
+    // pass mission_moce explicitly; command_moce is available for the latter.
+    bool mission_moce = true;
+    if (argc > 10) {
+      const std::string mode(argv[10]);
+      if (mode != "mission_moce" && mode != "command_moce")
+        throw std::runtime_error("Unknown automated MOCE mode: " + mode);
+      mission_moce = mode == "mission_moce";
+    }
     PlantModel plant(argv[4], control, model);
     CascadeController controller(control, model);
     Allocator allocator(control, model);
     CommandGenerator command(command_config);
     const PlantSample initial = plant.truth();
+    const double experiment_start = initial.time;
     command.handle(command_config.keys.at("automated_experiment"), initial.time, initial.position,
                    initial.rpy);
 
@@ -79,7 +90,7 @@ int main(int argc, char** argv) {
     Reference reference;
     ControlOutput output;
     double next_command = 0, moce_start = -1;
-    bool previous_moce = false;
+    bool previous_moce = false, effective_moce = false, effective_moce_z = false;
     Accumulator overall, transient1, transient2, complete;
     while (plant.data()->time < 96.0) {
       const auto sampled = plant.step();
@@ -96,8 +107,19 @@ int main(int argc, char** argv) {
         reference.rate = point.rate;
         controller.setMoceEnabled(command.moceEnabled());
         controller.setMoceZEnabled(command.moceZEnabled());
-        if (!previous_moce && command.moceEnabled()) moce_start = s.time;
-        previous_moce = command.moceEnabled();
+        effective_moce = command.moceEnabled();
+        effective_moce_z = command.moceZEnabled();
+        if (mission_moce) {
+          const double elapsed = s.time - experiment_start;
+          effective_moce = elapsed >= command_config.experiment_ascent_duration +
+                                         command_config.experiment_moce_start;
+          effective_moce_z = elapsed >= command_config.experiment_ascent_duration +
+                                           command_config.experiment_hover_duration;
+          controller.setMoceEnabled(effective_moce);
+          controller.setMoceZEnabled(effective_moce_z);
+        }
+        if (!previous_moce && effective_moce) moce_start = s.time;
+        previous_moce = effective_moce;
         next_command += 1.0 / command_config.publish_hz;
       }
       output = controller.update(s, reference);
@@ -147,8 +169,8 @@ int main(int argc, char** argv) {
           data[i + 38] = input.angle[i];
         }
         data[63] = output.adapting;
-        data[64] = command.moceEnabled();
-        data[65] = command.moceZEnabled();
+        data[64] = effective_moce;
+        data[65] = effective_moce_z;
         data[93] = sampled->common_effectiveness;
         for (int i = 0; i < 4; ++i) data[94 + i] = sampled->actual_thrust_scale[i];
         for (int i = 0; i < 3; ++i) {

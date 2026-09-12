@@ -41,3 +41,24 @@ representative pair contains the configured five seconds before that event.
 There is no explicit servo rate limiter in the v5 plant, so the corresponding
 contact fraction is reported as NaN; delay, joint PD, torque limit, damping, and
 armature create servo dynamics instead.
+
+## Mission-phase sweep
+
+Build the current source, run the explicit MOCE-on diagnostic sequence, then
+classify and analyze only Lissajous-eligible trials:
+
+```bash
+colcon build --symlink-install --packages-select palletrone_interfaces palletrone_controller plant
+python3 src/plant/test/monte_carlo_runner.py \
+  --config src/palletrone_interfaces/bag/monte/diagnostics/config/mission_sweep.yaml \
+  --output-dir src/palletrone_interfaces/bag/monte/diagnostics/mission_sweep
+python3 src/plant/test/mission_analysis.py \
+  --logs src/palletrone_interfaces/bag/monte/diagnostics/mission_sweep/logs/all \
+  --results src/palletrone_interfaces/bag/monte/diagnostics/mission_sweep/results/monte_carlo_results.csv \
+  --output src/palletrone_interfaces/bag/monte/diagnostics/mission_sweep/results/mission_metrics.csv
+```
+
+The Lissajous start is detected from the logged MOCE-Z event; its end is the
+configured 60 s duration. In the current sequence these are evaluation times
+20 and 80 s. A trial below the existing 0.4 m airborne gate at the start is
+`pre_mission_failure` and is excluded from mission denominators.

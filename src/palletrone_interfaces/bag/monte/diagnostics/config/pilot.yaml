@@ -1,0 +1,54 @@
+experiment:
+  com_scales: [1.20, 1.22, 1.24, 1.25, 1.26]
+  trials_per_level: 5
+  base_seed: 7000
+  common_random_numbers: true
+  process_timeout_s: 120.0
+paths:
+  model: src/palletrone_interfaces/config/model.yaml
+  control: src/palletrone_interfaces/config/control.yaml
+  command: src/palletrone_interfaces/config/command.yaml
+  scene: src/plant/xml/scene.xml
+success_criteria:
+  max_position_error_m: null
+  max_attitude_error_rad: null
+  max_com_error_m: null
+  max_motor_utilization: null
+  max_servo_angle_rad: null
+uncertainties:
+  parameter_randomization_enabled: false
+diagnostics:
+  output_dir: src/palletrone_interfaces/bag/monte/diagnostics/pilot
+  preloss_window_s: 5.0
+  variants:
+    - name: baseline
+      overrides: {}
+    - name: measurement_noise_off
+      overrides:
+        model.sensors.position_std: [0.0, 0.0, 0.0]
+        model.sensors.velocity_std: [0.0, 0.0, 0.0]
+        model.sensors.attitude_std: [0.0, 0.0, 0.0]
+        model.sensors.gyro_std: [0.0, 0.0, 0.0]
+        model.sensors.servo_std: 0.0
+    - name: residual_torque_off
+      overrides:
+        model.residual_torque.enabled: false
+    - name: residual_force_off
+      overrides:
+        model.residual_force.enabled: false
+    - name: motor_dynamics_ideal
+      overrides:
+        model.motor.delay_s: 0.0
+        model.motor.time_constant_s: 0.0
+    - name: servo_dynamics_ideal
+      overrides:
+        model.servo.delay_s: 0.0
+        model.servo.joint_damping: 0.0
+        model.servo.armature: 0.0
+        model.servo.max_torque: 1000.0
+    - name: motor_limit_relaxed
+      overrides:
+        model.motor.max_thrust: 75.0
+    - name: servo_limit_relaxed
+      overrides:
+        model.servo.limit_rad: 1.0

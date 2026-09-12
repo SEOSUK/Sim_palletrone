@@ -1,0 +1,8 @@
+{
+  "variant": "baseline",
+  "overrides": {},
+  "config": "/home/seosuk/palletrone_simulation/src/Sim_palletrone/src/palletrone_interfaces/bag/monte/diagnostics/config/pilot.yaml",
+  "git_commit": "b3e5405b1fc87bcc68a373858593980374b100db",
+  "command": "python3 src/plant/test/diagnostic_runner.py --config /home/seosuk/palletrone_simulation/src/Sim_palletrone/src/palletrone_interfaces/bag/monte/diagnostics/config/pilot.yaml",
+  "model_sha256": "recorded-in-run-config"
+}

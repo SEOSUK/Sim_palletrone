@@ -1,2 +1,4 @@
 pilot/*/logs/
 mission_sweep/logs/
+payload_grid/logs/
+payload_grid/equivalence/*/logs/

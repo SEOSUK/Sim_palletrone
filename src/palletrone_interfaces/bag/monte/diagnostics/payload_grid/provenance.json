@@ -1,0 +1,12 @@
+{
+  "base_git_commit": "56a5d70",
+  "branch": "palletrone",
+  "payload_mass_kg": 0.5,
+  "payload_z_m": 0.56,
+  "base_seed": 7000,
+  "common_random_numbers": true,
+  "grid_points": 25,
+  "replicates_per_point": 5,
+  "command": "python3 src/plant/test/monte_carlo_runner.py --config src/palletrone_interfaces/bag/monte/diagnostics/payload_grid/config/grid_pilot.yaml --output-dir src/palletrone_interfaces/bag/monte/diagnostics/payload_grid",
+  "description": "Modeled diagnostic grid; mission-only implementation is included in the resulting payload-grid commit."
+}

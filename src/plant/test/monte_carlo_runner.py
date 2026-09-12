@@ -18,7 +18,7 @@ import yaml
 
 
 RESULT_FIELDS = [
-    "trial_id", "replicate_id", "com_scale", "payload_mass", "payload_pos_x", "payload_pos_y",
+    "trial_id", "replicate_id", "com_scale", "payload_x_factor", "payload_y_factor", "payload_mass", "payload_pos_x", "payload_pos_y",
     "payload_pos_z", "true_com_x", "true_com_y", "true_com_z", "measurement_seed",
     "torque_seed", "force_seed", "position_rms", "position_rms_x", "position_rms_y",
     "position_rms_z", "velocity_rms", "attitude_rms", "attitude_rms_x",
@@ -31,7 +31,7 @@ RESULT_FIELDS = [
 ]
 
 PARAMETER_FIELDS = [
-    "trial_id", "replicate_id", "com_scale", "measurement_seed", "torque_seed", "force_seed",
+    "trial_id", "replicate_id", "com_scale", "payload_x_factor", "payload_y_factor", "measurement_seed", "torque_seed", "force_seed",
     "payload_mass", "payload_pos_x", "payload_pos_y", "payload_pos_z", "motor_delay",
     "motor_tau", "effectiveness_initial", "effectiveness_slope", "torque_sigma_x",
     "torque_sigma_y", "torque_sigma_z", "torque_tau_x", "torque_tau_y", "torque_tau_z",
@@ -59,6 +59,14 @@ def load_yaml(path: Path) -> dict:
     return value
 
 
+def deep_set(mapping: dict, dotted: str, value) -> None:
+    node = mapping
+    parts = dotted.split(".")
+    for part in parts[:-1]:
+        node = node[part]
+    node[parts[-1]] = value
+
+
 def trial_plan(config: dict) -> list[dict]:
     experiment = config["experiment"]
     mode = experiment.get("mode", "com_sweep")
@@ -69,12 +77,18 @@ def trial_plan(config: dict) -> list[dict]:
     elif mode == "com_sweep":
         scales = [float(x) for x in experiment["com_scales"]]
         count = int(experiment["trials_per_level"])
+    elif mode == "payload_grid":
+        scales, count = [math.nan], int(experiment["trials_per_point"])
     else:
         raise ValueError(f"Unsupported experiment.mode: {mode}")
     base = int(experiment["base_seed"])
     common_random_numbers = bool(experiment.get("common_random_numbers", False))
     plan = []
-    for scale in scales:
+    grid = [(scale, None, None) for scale in scales]
+    if mode == "payload_grid":
+        grid = [(math.nan, float(x), float(y)) for x in experiment["x_factors"]
+                for y in experiment["y_factors"]]
+    for scale, x_factor, y_factor in grid:
         for replicate_id in range(count):
             trial_id = len(plan)
             seed_index = replicate_id if common_random_numbers else trial_id
@@ -82,6 +96,8 @@ def trial_plan(config: dict) -> list[dict]:
                 "trial_id": trial_id,
                 "replicate_id": replicate_id,
                 "com_scale": scale,
+                "payload_x_factor": x_factor,
+                "payload_y_factor": y_factor,
                 "measurement_seed": base + 3 * seed_index,
                 "torque_seed": base + 3 * seed_index + 1,
                 "force_seed": base + 3 * seed_index + 2,
@@ -92,7 +108,12 @@ def trial_plan(config: dict) -> list[dict]:
 def parameter_row(trial: dict, model: dict) -> dict:
     m = model["model"]
     payload = m["payload"]
-    pos = [float(x) * trial["com_scale"] for x in payload["position"]]
+    if trial.get("payload_x_factor") is not None:
+        pos = [float(payload["position"][0]) * trial["payload_x_factor"],
+               float(payload["position"][1]) * trial["payload_y_factor"],
+               float(payload["position"][2])]
+    else:
+        pos = [float(x) * trial["com_scale"] for x in payload["position"]]
     motor, torque, force = m["motor"], m["residual_torque"], m["residual_force"]
     row = dict(trial)
     row.update({
@@ -344,6 +365,8 @@ def main() -> int:
     results_path = monte_dir / "results/monte_carlo_results.csv"
     parameters_path = monte_dir / "results/monte_carlo_parameters.csv"
     baseline = load_yaml(model_path)
+    for key, value in config.get("model_overrides", {}).items():
+        deep_set(baseline, key, value)
     control = load_yaml(control_path)
     parameter_rows = [parameter_row(trial, baseline) for trial in plan]
     write_table(parameters_path, PARAMETER_FIELDS, parameter_rows)
@@ -357,6 +380,7 @@ def main() -> int:
         trial_id = int(row["trial_id"])
         trial = expected.get(trial_id)
         same_definition = trial is not None and all([
+            (math.isnan(trial["com_scale"]) and math.isnan(float(row["com_scale"]))) or
             float(row["com_scale"]) == trial["com_scale"],
             int(row["measurement_seed"]) == trial["measurement_seed"],
             int(row["torque_seed"]) == trial["torque_seed"],

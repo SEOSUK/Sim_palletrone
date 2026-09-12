@@ -67,10 +67,12 @@ def window_metrics(t,v,model,window):
     return result
 
 def analyze(log,summary,base_model,control,duration):
-    t,v=read_log(log); scale=float(summary["com_scale"]); model=copy.deepcopy(base_model)
-    model["model"]["payload"]["position"]=[scale*x for x in base_model["model"]["payload"]["position"]]
+    t,v=read_log(log); model=copy.deepcopy(base_model)
+    model["model"]["payload"]["position"]=[float(summary[f"payload_pos_{axis}"]) for axis in "xyz"]
     primary,steady=mission_windows(t,v,duration); gate=float(control["controller"]["adaptation_min_height"])
-    eligible,mission_loss=classify_mission(t,v,gate,primary); status="pre_mission_failure" if not eligible else "mission_loss" if mission_loss else "mission_completion"
+    eligible,mission_loss=classify_mission(t,v,gate,primary)
+    grid_trial=summary.get("payload_x_factor","") not in ("",None)
+    status=("stabilization_failure" if grid_trial else "pre_mission_failure") if not eligible else "mission_loss" if mission_loss else "mission_completion"
     row={"mission_status":status,"mission_eligible":eligible,"mission_completion":eligible and not mission_loss,"mission_loss":mission_loss,
          "lissajous_start_s":primary[0],"lissajous_end_s":primary[1],**summary}
     if eligible:

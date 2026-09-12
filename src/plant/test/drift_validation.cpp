@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     if (argc < 6)
       throw std::runtime_error(
           "drift_validation CONTROL MODEL COMMAND SCENE LABEL [OUTPUT_CSV] "
-          "[MEASUREMENT_SEED [TORQUE_SEED FORCE_SEED]] [mission_moce|command_moce]");
+          "[MEASUREMENT_SEED [TORQUE_SEED FORCE_SEED]] [mission_moce|mission_only|command_moce]");
     Config control(argv[1]);
     ModelConfig model{Config(argv[2])};
     if (argc > 7) model.seed = std::stoi(argv[7]);
@@ -62,12 +62,13 @@ int main(int argc, char** argv) {
     // Preserve the historical validation/Monte-Carlo MOCE-on sequence even
     // though the interactive M-key command now defaults to MOCE-off. Diagnostics
     // pass mission_moce explicitly; command_moce is available for the latter.
-    bool mission_moce = true;
+    bool mission_moce = true, mission_only = false;
     if (argc > 10) {
       const std::string mode(argv[10]);
-      if (mode != "mission_moce" && mode != "command_moce")
+      if (mode != "mission_moce" && mode != "mission_only" && mode != "command_moce")
         throw std::runtime_error("Unknown automated MOCE mode: " + mode);
       mission_moce = mode == "mission_moce";
+      mission_only = mode == "mission_only";
     }
     PlantModel plant(argv[4], control, model);
     CascadeController controller(control, model);
@@ -99,18 +100,39 @@ int main(int argc, char** argv) {
       if (!s.position.allFinite() || !s.rpy.allFinite() || s.position.norm() >= 50)
         throw std::runtime_error("Nonfinite or divergent automated flight state");
       if (s.time + 1e-10 >= next_command) {
-        const auto point = command.at(s.time);
-        reference.position = point.position;
-        reference.velocity = point.velocity;
-        reference.acceleration = point.acceleration;
-        reference.rpy = point.rpy;
-        reference.rate = point.rate;
+        const double elapsed = s.time - experiment_start;
+        if (mission_only && elapsed >= 15.5) {
+          const double curve_elapsed = elapsed - 15.5;
+          reference.position = command_config.center;
+          reference.velocity.setZero(); reference.acceleration.setZero(); reference.rpy.setZero(); reference.rate.setZero();
+          for (int i = 0; i < 3; ++i) {
+            const double omega = 2.0 * M_PI * command_config.frequency[i];
+            const double phase = omega * curve_elapsed + command_config.phase[i];
+            reference.position[i] += command_config.amplitude[i] * std::sin(phase);
+            reference.velocity[i] = command_config.amplitude[i] * omega * std::cos(phase);
+            reference.acceleration[i] = -command_config.amplitude[i] * omega * omega * std::sin(phase);
+          }
+        } else if (mission_only) {
+          reference.position = command_config.experiment_hover_position;
+          reference.velocity.setZero(); reference.acceleration.setZero(); reference.rpy.setZero(); reference.rate.setZero();
+        } else {
+          const auto point = command.at(s.time);
+          reference.position = point.position;
+          reference.velocity = point.velocity;
+          reference.acceleration = point.acceleration;
+          reference.rpy = point.rpy;
+          reference.rate = point.rate;
+        }
         controller.setMoceEnabled(command.moceEnabled());
         controller.setMoceZEnabled(command.moceZEnabled());
         effective_moce = command.moceEnabled();
         effective_moce_z = command.moceZEnabled();
-        if (mission_moce) {
-          const double elapsed = s.time - experiment_start;
+        if (mission_only) {
+          effective_moce = elapsed >= 0.5;
+          effective_moce_z = elapsed >= 15.5;
+          controller.setMoceEnabled(effective_moce);
+          controller.setMoceZEnabled(effective_moce_z);
+        } else if (mission_moce) {
           effective_moce = elapsed >= command_config.experiment_ascent_duration +
                                          command_config.experiment_moce_start;
           effective_moce_z = elapsed >= command_config.experiment_ascent_duration +
